@@ -71,6 +71,7 @@ struct L10n {
     static var language: String { tr("Language", "Dil", "Sprache", "Langue", "Idioma", "言語", "语言") }
     static var about: String { tr("About SystemPulse", "SystemPulse Hakkında", "Über SystemPulse", "À propos de SystemPulse", "Acerca de SystemPulse", "SystemPulseについて", "关于SystemPulse") }
     static var quit: String { tr("Quit", "Çıkış", "Beenden", "Quitter", "Salir", "終了", "退出") }
+    static var theme: String { tr("Theme", "Tema", "Thema", "Thème", "Tema", "テーマ", "主题") }
     static var power: String { tr("Power", "Güç", "Strom", "Alimentation", "Energía", "電源", "电源") }
     static var connectedToAdapter: String { tr("Connected to power adapter", "Güç adaptörüne bağlı", "Mit Netzteil verbunden", "Connecté à l'adaptateur", "Conectado al adaptador", "電源アダプタに接続", "已连接电源适配器") }
     static var fan: String { tr("Fan", "Fan", "Lüfter", "Ventilateur", "Ventilador", "ファン", "风扇") }
@@ -230,26 +231,87 @@ struct LucideIcons {
     }
 }
 
+// MARK: - App Theme
+
+enum AppTheme: String, CaseIterable {
+    case dark = "dark"
+    case light = "light"
+
+    var displayName: String {
+        switch self {
+        case .dark: return "Dark"
+        case .light: return "Light"
+        }
+    }
+}
+
 // MARK: - Settings
 
 class Settings {
     static let shared = Settings()
 
     private let showDetailsKey = "showMenuBarDetails"
+    private let themeKey = "appTheme"
 
     var showMenuBarDetails: Bool {
         get { UserDefaults.standard.object(forKey: showDetailsKey) as? Bool ?? false }  // Default: icon only
         set { UserDefaults.standard.set(newValue, forKey: showDetailsKey) }
+    }
+
+    var theme: AppTheme {
+        get { AppTheme(rawValue: UserDefaults.standard.string(forKey: themeKey) ?? "dark") ?? .dark }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: themeKey) }
     }
 }
 
 // MARK: - Theme
 
 struct Theme {
-    static let bg = NSColor(red: 0.06, green: 0.06, blue: 0.08, alpha: 1.0)
-    static let card = NSColor(red: 0.10, green: 0.10, blue: 0.13, alpha: 1.0)
+    static var current: AppTheme { Settings.shared.theme }
+
+    // Background colors
+    static var bg: NSColor {
+        current == .dark
+            ? NSColor(red: 0.06, green: 0.06, blue: 0.08, alpha: 1.0)
+            : NSColor(red: 0.95, green: 0.95, blue: 0.97, alpha: 1.0)
+    }
+
+    static var card: NSColor {
+        current == .dark
+            ? NSColor(red: 0.10, green: 0.10, blue: 0.13, alpha: 1.0)
+            : NSColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
+    }
+
+    // Gradient colors for cards
+    static var cardGradientTop: NSColor {
+        current == .dark
+            ? NSColor(red: 0.12, green: 0.12, blue: 0.15, alpha: 1.0)
+            : NSColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
+    }
+
+    static var cardGradientBottom: NSColor {
+        current == .dark
+            ? NSColor(red: 0.08, green: 0.08, blue: 0.10, alpha: 1.0)
+            : NSColor(red: 0.96, green: 0.96, blue: 0.98, alpha: 1.0)
+    }
+
+    // Card border
+    static var cardBorder: NSColor {
+        current == .dark
+            ? NSColor(white: 0.18, alpha: 0.5)
+            : NSColor(white: 0.85, alpha: 0.8)
+    }
+
+    // Progress bar background
+    static var progressBg: NSColor {
+        current == .dark
+            ? NSColor(white: 0.15, alpha: 1)
+            : NSColor(white: 0.88, alpha: 1)
+    }
+
     static let accent = NSColor(red: 0.4, green: 0.7, blue: 1.0, alpha: 1.0)
 
+    // Accent colors (work on both themes)
     static let cpu = NSColor(red: 0.35, green: 0.55, blue: 1.0, alpha: 1.0)
     static let mem = NSColor(red: 1.0, green: 0.45, blue: 0.35, alpha: 1.0)
     static let gpu = NSColor(red: 0.95, green: 0.35, blue: 0.55, alpha: 1.0)
@@ -261,9 +323,24 @@ struct Theme {
     static let fan = NSColor(red: 0.5, green: 0.8, blue: 1.0, alpha: 1.0)
     static let system = NSColor(red: 0.6, green: 0.5, blue: 0.9, alpha: 1.0)
 
-    static let text = NSColor(red: 0.95, green: 0.95, blue: 0.97, alpha: 1.0)
-    static let text2 = NSColor(red: 0.6, green: 0.6, blue: 0.65, alpha: 1.0)
-    static let text3 = NSColor(red: 0.45, green: 0.45, blue: 0.50, alpha: 1.0)
+    // Text colors (adjust for light theme readability)
+    static var text: NSColor {
+        current == .dark
+            ? NSColor(red: 0.95, green: 0.95, blue: 0.97, alpha: 1.0)
+            : NSColor(red: 0.1, green: 0.1, blue: 0.12, alpha: 1.0)
+    }
+
+    static var text2: NSColor {
+        current == .dark
+            ? NSColor(red: 0.6, green: 0.6, blue: 0.65, alpha: 1.0)
+            : NSColor(red: 0.4, green: 0.4, blue: 0.45, alpha: 1.0)
+    }
+
+    static var text3: NSColor {
+        current == .dark
+            ? NSColor(red: 0.45, green: 0.45, blue: 0.50, alpha: 1.0)
+            : NSColor(red: 0.55, green: 0.55, blue: 0.60, alpha: 1.0)
+    }
 
     static let warning = NSColor(red: 1.0, green: 0.75, blue: 0.2, alpha: 1.0)
     static let danger = NSColor(red: 1.0, green: 0.35, blue: 0.35, alpha: 1.0)
@@ -900,9 +977,6 @@ class ContentView: NSView {
         shadow.shadowColor = Theme.accent.withAlphaComponent(0.5)
         shadow.shadowBlurRadius = 8
         "SystemPulse".draw(at: NSPoint(x: pad, y: y), withAttributes: [.font: NSFont.systemFont(ofSize: 16, weight: .bold), .foregroundColor: Theme.text, .shadow: shadow])
-        Theme.accent.withAlphaComponent(0.2).setFill()
-        NSBezierPath(roundedRect: NSRect(x: pad + 102, y: y + 2, width: 34, height: 16), xRadius: 4, yRadius: 4).fill()
-        "PRO".draw(at: NSPoint(x: pad + 108, y: y + 2), withAttributes: [.font: NSFont.systemFont(ofSize: 10, weight: .bold), .foregroundColor: Theme.accent])
         let up = formatUptime(m.uptime)
         up.draw(at: NSPoint(x: frame.width - pad - up.size(withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)]).width, y: y + 2), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular), .foregroundColor: Theme.text2])
         y -= gap
@@ -1016,8 +1090,8 @@ class ContentView: NSView {
         drawProgressBar(value: m.diskUsed / 100, x: pad + 185, y: y + 14, w: w - 200, h: 10, color: diskColor)
         y -= gap
 
-        // BATTERY - 72px
-        let battH: CGFloat = 72
+        // BATTERY - 80px
+        let battH: CGFloat = 80
         y -= battH
         let battRect = NSRect(x: pad, y: y, width: w, height: battH)
         cardRects[.battery] = battRect
@@ -1031,15 +1105,15 @@ class ContentView: NSView {
             // Time remaining or status
             if m.battTimeRemaining > 0 && !m.battCharging {
                 let h = m.battTimeRemaining / 60, mn = m.battTimeRemaining % 60
-                (h > 0 ? "\(h)h \(mn)m \(L10n.remaining)" : "\(mn)m \(L10n.remaining)").draw(at: NSPoint(x: pad + 14, y: y + 16), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text2])
+                (h > 0 ? "\(h)h \(mn)m \(L10n.remaining)" : "\(mn)m \(L10n.remaining)").draw(at: NSPoint(x: pad + 14, y: y + 18), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text2])
             } else if m.battCharging {
-                L10n.connectedToPower.draw(at: NSPoint(x: pad + 14, y: y + 16), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.accent])
+                L10n.connectedToPower.draw(at: NSPoint(x: pad + 14, y: y + 18), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.accent])
             }
             drawProgressBar(value: m.battLevel / 100, x: pad + 14, y: y + 4, w: w - 30, h: 10, color: battColor)
         } else {
             "AC".draw(at: NSPoint(x: pad + 14, y: y + battH - 30), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 22, weight: .bold), .foregroundColor: Theme.batt])
             L10n.power.draw(at: NSPoint(x: pad + 14, y: y + battH - 48), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
-            L10n.connectedToAdapter.draw(at: NSPoint(x: pad + 14, y: y + 16), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.batt])
+            L10n.connectedToAdapter.draw(at: NSPoint(x: pad + 14, y: y + 18), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.batt])
         }
         y -= gap
 
@@ -1086,10 +1160,16 @@ class ContentView: NSView {
     }
 
     func drawCard(x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat) {
-        Theme.card.setFill()
-        NSBezierPath(roundedRect: NSRect(x: x, y: y, width: w, height: h), xRadius: 12, yRadius: 12).fill()
-        NSColor(white: 0.18, alpha: 0.5).setStroke()
-        NSBezierPath(roundedRect: NSRect(x: x, y: y, width: w, height: h), xRadius: 12, yRadius: 12).stroke()
+        let path = NSBezierPath(roundedRect: NSRect(x: x, y: y, width: w, height: h), xRadius: 12, yRadius: 12)
+
+        // Draw gradient fill
+        if let gradient = NSGradient(starting: Theme.cardGradientTop, ending: Theme.cardGradientBottom) {
+            gradient.draw(in: path, angle: 90)  // 90 degrees = top to bottom
+        }
+
+        // Draw border
+        Theme.cardBorder.setStroke()
+        path.stroke()
     }
 
     func drawHoverArrow(in rect: NSRect) {
@@ -1126,7 +1206,7 @@ class ContentView: NSView {
     }
 
     func drawProgressBar(value: Double, x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat, color: NSColor) {
-        NSColor(white: 0.15, alpha: 1).setFill()
+        Theme.progressBg.setFill()
         NSBezierPath(roundedRect: NSRect(x: x, y: y, width: w, height: h), xRadius: h/2, yRadius: h/2).fill()
         let fillW = w * CGFloat(min(max(value, 0), 1))
         if fillW > 0 { color.setFill(); NSBezierPath(roundedRect: NSRect(x: x, y: y, width: fillW, height: h), xRadius: h/2, yRadius: h/2).fill() }
@@ -1209,9 +1289,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var menu: NSMenu!
     var eventMonitor: Any?
     var showDetailsMenuItem: NSMenuItem!
-    var cpuMenuItem: NSMenuItem!
-    var memMenuItem: NSMenuItem!
-    var tempMenuItem: NSMenuItem!
 
     func createMenuBarIcon() -> NSImage {
         // Create a monitor/display icon (similar to Lucide's "monitor" icon)
@@ -1257,7 +1334,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let hasFans = !monitor.metrics.fanSpeed.isEmpty
-        let height: CGFloat = hasFans ? 772 : 716
+        let height: CGFloat = hasFans ? 780 : 724
 
         panel = BorderlessPanel(contentRect: NSRect(x: 0, y: 0, width: 380, height: height))
 
@@ -1275,21 +1352,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func setupMenu() {
         menu = NSMenu()
-
-        // Header with current stats
-        let headerItem = NSMenuItem(title: "SystemPulse Pro", action: nil, keyEquivalent: "")
-        menu.addItem(headerItem)
-        menu.addItem(NSMenuItem.separator())
-
-        // Current readings (non-clickable)
-        cpuMenuItem = NSMenuItem(title: "\(L10n.cpu): ---%", action: nil, keyEquivalent: "")
-        memMenuItem = NSMenuItem(title: "\(L10n.memory): ---%", action: nil, keyEquivalent: "")
-        tempMenuItem = NSMenuItem(title: "\(L10n.temperature): ---", action: nil, keyEquivalent: "")
-        menu.addItem(cpuMenuItem)
-        menu.addItem(memMenuItem)
-        menu.addItem(tempMenuItem)
-
-        menu.addItem(NSMenuItem.separator())
 
         // Settings toggle for menu bar display
         showDetailsMenuItem = NSMenuItem(title: L10n.showCPUMemory, action: #selector(toggleMenuBarDetails), keyEquivalent: "")
@@ -1312,6 +1374,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         languageItem.submenu = languageMenu
         menu.addItem(languageItem)
 
+        // Theme submenu
+        let themeItem = NSMenuItem(title: L10n.theme, action: nil, keyEquivalent: "")
+        let themeMenu = NSMenu()
+        for theme in AppTheme.allCases {
+            let item = NSMenuItem(title: theme.displayName, action: #selector(changeTheme(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = theme
+            if theme == Settings.shared.theme { item.state = .on }
+            themeMenu.addItem(item)
+        }
+        themeItem.submenu = themeMenu
+        menu.addItem(themeItem)
+
         menu.addItem(NSMenuItem.separator())
 
         // About
@@ -1330,6 +1405,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupMenu()
         // Refresh the panel
         contentView.needsDisplay = true
+    }
+
+    @objc func changeTheme(_ sender: NSMenuItem) {
+        guard let theme = sender.representedObject as? AppTheme else { return }
+        Settings.shared.theme = theme
+        setupMenu()  // Rebuild menu to update checkmark
+        contentView.needsDisplay = true
+        panel.backgroundColor = Theme.bg  // Update panel background
+        contentView.layer?.backgroundColor = Theme.bg.cgColor
     }
 
     @objc func showAbout() {
@@ -1364,18 +1448,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             statusItem.button?.title = menuText
         } else {
             statusItem.button?.title = ""
-        }
-
-        // Update menu items
-        cpuMenuItem?.title = String(format: "CPU: %.1f%%", m.cpu)
-        memMenuItem?.title = String(format: "Memory: %.1f%%", m.mem)
-        if m.cpuTemp > 0 {
-            tempMenuItem?.title = String(format: "CPU Temp: %.0f°C", m.cpuTemp)
-            if m.gpuTemp > 0 {
-                tempMenuItem?.title = String(format: "Temp: CPU %.0f°C / GPU %.0f°C", m.cpuTemp, m.gpuTemp)
-            }
-        } else {
-            tempMenuItem?.title = "Temperature: N/A"
         }
     }
 
@@ -1413,7 +1485,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         } else if let btn = statusItem.button, let btnWindow = btn.window {
             let hasFans = !monitor.metrics.fanSpeed.isEmpty
-            let height: CGFloat = hasFans ? 772 : 716
+            let height: CGFloat = hasFans ? 780 : 724
 
             // Position panel below the menu bar button
             let btnRect = btn.convert(btn.bounds, to: nil)
