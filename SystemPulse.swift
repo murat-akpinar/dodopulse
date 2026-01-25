@@ -674,24 +674,67 @@ class Monitor {
     }
 
     private func updateBrightness() {
-        // Get main display brightness using CoreGraphics
-        var brightness: Float = 0
-        var iterator: io_iterator_t = 0
-        let result = IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("IODisplayConnect"), &iterator)
-        if result == kIOReturnSuccess {
-            var service = IOIteratorNext(iterator)
-            while service != 0 {
+        // Try multiple methods to get display brightness
+        var brightness: Float = -1
+
+        // Method 1: Use DisplayServices framework (works on most Macs)
+        // DisplayServicesGetBrightness is a private API but widely used
+        typealias DisplayServicesGetBrightnessFunc = @convention(c) (CGDirectDisplayID, UnsafeMutablePointer<Float>) -> Int32
+        if let displayServices = dlopen("/System/Library/PrivateFrameworks/DisplayServices.framework/DisplayServices", RTLD_LAZY) {
+            if let getBrightness = dlsym(displayServices, "DisplayServicesGetBrightness") {
+                let getBrightnessFunc = unsafeBitCast(getBrightness, to: DisplayServicesGetBrightnessFunc.self)
                 var brightnessValue: Float = 0
-                IODisplayGetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString, &brightnessValue)
-                if brightnessValue > 0 {
+                let result = getBrightnessFunc(CGMainDisplayID(), &brightnessValue)
+                if result == 0 && brightnessValue >= 0 {
                     brightness = brightnessValue
                 }
-                IOObjectRelease(service)
-                service = IOIteratorNext(iterator)
             }
-            IOObjectRelease(iterator)
+            dlclose(displayServices)
         }
-        metrics.screenBrightness = Double(brightness * 100)
+
+        // Method 2: Fallback to IODisplayGetFloatParameter
+        if brightness < 0 {
+            var iterator: io_iterator_t = 0
+            let result = IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("IODisplayConnect"), &iterator)
+            if result == kIOReturnSuccess {
+                var service = IOIteratorNext(iterator)
+                while service != 0 {
+                    var brightnessValue: Float = 0
+                    IODisplayGetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString, &brightnessValue)
+                    if brightnessValue > 0 {
+                        brightness = brightnessValue
+                    }
+                    IOObjectRelease(service)
+                    service = IOIteratorNext(iterator)
+                }
+                IOObjectRelease(iterator)
+            }
+        }
+
+        // Method 3: Try backlight through IOKit
+        if brightness < 0 {
+            var iterator: io_iterator_t = 0
+            let matchDict = IOServiceMatching("AppleBacklightDisplay")
+            if IOServiceGetMatchingServices(kIOMainPortDefault, matchDict, &iterator) == kIOReturnSuccess {
+                var service = IOIteratorNext(iterator)
+                while service != 0 {
+                    var props: Unmanaged<CFMutableDictionary>?
+                    if IORegistryEntryCreateCFProperties(service, &props, kCFAllocatorDefault, 0) == kIOReturnSuccess,
+                       let properties = props?.takeRetainedValue() as? [String: Any] {
+                        if let brightnessDict = properties["brightness"] as? [String: Any],
+                           let value = brightnessDict["value"] as? Int,
+                           let max = brightnessDict["max"] as? Int, max > 0 {
+                            brightness = Float(value) / Float(max)
+                        }
+                    }
+                    IOObjectRelease(service)
+                    service = IOIteratorNext(iterator)
+                }
+                IOObjectRelease(iterator)
+            }
+        }
+
+        metrics.screenBrightness = brightness >= 0 ? Double(brightness * 100) : -1
     }
 
     private func updatePowerConsumption() {
@@ -1341,14 +1384,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         updateMenuBarDisplay()
 
         if panel.isVisible {
-            let hasFans = !monitor.metrics.fanSpeed.isEmpty
-            let newHeight: CGFloat = hasFans ? 752 : 696
-            if panel.frame.height != newHeight {
-                var frame = panel.frame
-                frame.size.height = newHeight
-                panel.setFrame(frame, display: true)
-                contentView.frame = NSRect(x: 0, y: 0, width: 380, height: newHeight)
-            }
             contentView.metrics = monitor.metrics
             contentView.needsDisplay = true
         }

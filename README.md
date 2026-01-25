@@ -13,14 +13,14 @@ A lightweight, native macOS menu bar app that displays real-time system metrics 
 
 ## Features
 
-- **CPU monitoring** - Usage percentage, temperature, per-core tracking with history graph
+- **CPU monitoring** - Usage percentage, temperature, frequency (Intel), per-core tracking with history graph
 - **Memory monitoring** - Used/free memory, active/wired/compressed breakdown
-- **GPU monitoring** - Utilization percentage, temperature, history graph
+- **GPU monitoring** - Utilization percentage, temperature, display refresh rate (Hz)
 - **Network monitoring** - Download/upload speeds, local & public IP, session totals
-- **Disk monitoring** - Usage percentage, free space, volume name
-- **Battery monitoring** - Charge level, charging status, time remaining
+- **Disk monitoring** - Usage percentage, free space, SSD health (when available)
+- **Battery monitoring** - Charge level, charging status, time remaining, power consumption
 - **Fan monitoring** - RPM for each fan (when available)
-- **System info** - Load average, process count, swap usage, kernel version, uptime
+- **System info** - Load average, process count, swap usage, kernel version, uptime, screen brightness
 - **Multi-language support** - Choose your language from the menu (7 languages available)
 
 ### Interactive features

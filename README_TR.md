@@ -12,14 +12,14 @@ Gerçek zamanlı sistem metriklerini güzel mini grafiklerle gösteren hafif, ye
 
 ## Özellikler
 
-- **CPU izleme** - Kullanım yüzdesi, sıcaklık, çekirdek başına takip ve geçmiş grafiği
+- **CPU izleme** - Kullanım yüzdesi, sıcaklık, frekans (Intel), çekirdek başına takip ve geçmiş grafiği
 - **Bellek izleme** - Kullanılan/boş bellek, aktif/wired/sıkıştırılmış dağılımı
-- **GPU izleme** - Kullanım yüzdesi, sıcaklık, geçmiş grafiği
+- **GPU izleme** - Kullanım yüzdesi, sıcaklık, ekran yenileme hızı (Hz)
 - **Ağ izleme** - İndirme/yükleme hızları, yerel ve genel IP, oturum toplamları
-- **Disk izleme** - Kullanım yüzdesi, boş alan, birim adı
-- **Pil izleme** - Şarj seviyesi, şarj durumu, kalan süre
+- **Disk izleme** - Kullanım yüzdesi, boş alan, SSD sağlığı (varsa)
+- **Pil izleme** - Şarj seviyesi, şarj durumu, kalan süre, güç tüketimi
 - **Fan izleme** - Her fan için RPM (varsa)
-- **Sistem bilgisi** - Yük ortalaması, işlem sayısı, swap kullanımı, kernel sürümü, çalışma süresi
+- **Sistem bilgisi** - Yük ortalaması, işlem sayısı, swap kullanımı, kernel sürümü, çalışma süresi, ekran parlaklığı
 - **Çoklu dil desteği** - Menüden dilinizi seçin (7 dil mevcut)
 
 ### Etkileşimli özellikler
