@@ -1,6 +1,6 @@
 # SystemPulse
 
-🌍 **Localized in 7 languages:** 🇺🇸 English | 🇹🇷 [Türkçe](README_TR.md) | 🇩🇪 Deutsch | 🇫🇷 Français | 🇪🇸 Español | 🇯🇵 日本語 | 🇨🇳 中文
+🌍 **Localized in 7 languages:** 🇺🇸 English | 🇹🇷 [Türkçe](README_TR.md) | 🇩🇪 [Deutsch](README_DE.md) | 🇫🇷 [Français](README_FR.md) | 🇪🇸 [Español](README_ES.md) | 🇯🇵 [日本語](README_JA.md) | 🇨🇳 [中文](README_ZH.md)
 
 A lightweight, native macOS menu bar app that displays real-time system metrics with beautiful mini graphs.
 

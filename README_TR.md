@@ -1,6 +1,6 @@
 # SystemPulse
 
-🌍 **7 dilde yerelleştirildi:** 🇺🇸 [English](README.md) | 🇹🇷 Türkçe | 🇩🇪 Deutsch | 🇫🇷 Français | 🇪🇸 Español | 🇯🇵 日本語 | 🇨🇳 中文
+🌍 **7 dilde yerelleştirildi:** 🇺🇸 [English](README.md) | 🇹🇷 Türkçe | 🇩🇪 [Deutsch](README_DE.md) | 🇫🇷 [Français](README_FR.md) | 🇪🇸 [Español](README_ES.md) | 🇯🇵 [日本語](README_JA.md) | 🇨🇳 [中文](README_ZH.md)
 
 Gerçek zamanlı sistem metriklerini güzel mini grafiklerle gösteren hafif, yerli bir macOS menü çubuğu uygulaması.
 
