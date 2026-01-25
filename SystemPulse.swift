@@ -77,6 +77,10 @@ struct L10n {
     static var load: String { tr("Load", "Yük", "Last", "Charge", "Carga", "負荷", "负载") }
     static var swap: String { tr("Swap", "Takas", "Swap", "Swap", "Intercambio", "スワップ", "交换") }
     static var kernel: String { tr("Kernel", "Çekirdek", "Kernel", "Noyau", "Kernel", "カーネル", "内核") }
+    static var ssdHealth: String { tr("SSD Health", "SSD Sağlığı", "SSD-Zustand", "Santé SSD", "Salud SSD", "SSD健康", "SSD健康") }
+    static var brightness: String { tr("Brightness", "Parlaklık", "Helligkeit", "Luminosité", "Brillo", "明るさ", "亮度") }
+    static var powerUsage: String { tr("Power", "Güç", "Leistung", "Puissance", "Potencia", "消費電力", "功耗") }
+    static var frequency: String { tr("Frequency", "Frekans", "Frequenz", "Fréquence", "Frecuencia", "周波数", "频率") }
 
     private static func tr(_ en: String, _ tr: String, _ de: String, _ fr: String, _ es: String, _ ja: String, _ zh: String) -> String {
         switch current {
@@ -354,6 +358,19 @@ class SMCService {
         for (i, char) in str.prefix(4).enumerated() { result |= UInt32(char.asciiValue ?? 0) << (24 - i * 8) }
         return result
     }
+
+    func readSMCValue(key: String) -> Int16? {
+        guard isConnected else { return nil }
+        var inputStruct = SMCKeyData()
+        var outputStruct = SMCKeyData()
+        inputStruct.key = stringToUInt32(key)
+        inputStruct.data8 = 5
+        let inputSize = MemoryLayout<SMCKeyData>.size
+        var outputSize = MemoryLayout<SMCKeyData>.size
+        let result = IOConnectCallStructMethod(connection, 2, &inputStruct, inputSize, &outputStruct, &outputSize)
+        guard result == kIOReturnSuccess else { return nil }
+        return Int16(outputStruct.bytes.0) << 8 | Int16(outputStruct.bytes.1)
+    }
 }
 
 // MARK: - Apple Silicon Thermal (alternative method)
@@ -434,8 +451,13 @@ class Metrics {
     var netHistory: [Double] = []
 
     var diskUsed: Double = 0, diskFree: UInt64 = 0, diskTotal: UInt64 = 0, diskName: String = "Macintosh HD"
+    var ssdHealthPercent: Int = -1  // -1 means not available
 
     var battLevel: Double = 100, battCharging: Bool = false, battTimeRemaining: Int = -1, hasBatt: Bool = false
+    var powerWatts: Double = -1  // -1 means not available
+
+    var screenBrightness: Double = -1  // 0-100, -1 means not available
+    var cpuFrequencyMHz: Int = -1  // -1 means not available
 
     var uptime: TimeInterval = 0
     var loadAvg: (Double, Double, Double) = (0, 0, 0)
@@ -637,6 +659,121 @@ class Monitor {
 
         metrics.fanSpeed = []
         for i in 0..<2 { if let rpm = smc.getFanSpeed(fan: i), rpm > 0 { metrics.fanSpeed.append(rpm) } }
+
+        // Update screen brightness
+        updateBrightness()
+
+        // Update power consumption
+        updatePowerConsumption()
+
+        // Update CPU frequency (if available)
+        updateCPUFrequency()
+
+        // Update SSD health
+        updateSSDHealth()
+    }
+
+    private func updateBrightness() {
+        // Get main display brightness using CoreGraphics
+        var brightness: Float = 0
+        var iterator: io_iterator_t = 0
+        let result = IOServiceGetMatchingServices(kIOMainPortDefault, IOServiceMatching("IODisplayConnect"), &iterator)
+        if result == kIOReturnSuccess {
+            var service = IOIteratorNext(iterator)
+            while service != 0 {
+                var brightnessValue: Float = 0
+                IODisplayGetFloatParameter(service, 0, kIODisplayBrightnessKey as CFString, &brightnessValue)
+                if brightnessValue > 0 {
+                    brightness = brightnessValue
+                }
+                IOObjectRelease(service)
+                service = IOIteratorNext(iterator)
+            }
+            IOObjectRelease(iterator)
+        }
+        metrics.screenBrightness = Double(brightness * 100)
+    }
+
+    private func updatePowerConsumption() {
+        // Try to get power consumption from IOKit power source info
+        guard let powerSourceInfo = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let powerSources = IOPSCopyPowerSourcesList(powerSourceInfo)?.takeRetainedValue() as? [Any],
+              let firstSource = powerSources.first,
+              let description = IOPSGetPowerSourceDescription(powerSourceInfo, firstSource as CFTypeRef)?.takeUnretainedValue() as? [String: Any] else {
+            return
+        }
+
+        // Check if we have power source info and try to get amperage from SMC
+        if description[kIOPSCurrentCapacityKey] != nil {
+            // Try to get amperage from SMC (IPBR = battery current)
+            if let amperage = smc.readSMCValue(key: "IPBR") {
+                // Power = Voltage * Current (approximate)
+                let voltage = 12.0 // Approximate MacBook battery voltage
+                metrics.powerWatts = abs(Double(amperage) / 1000.0 * voltage)
+            }
+        }
+    }
+
+    private func updateCPUFrequency() {
+        // On Apple Silicon, CPU frequency is not directly accessible
+        // On Intel, we can try to get it from sysctl
+        var freq: UInt64 = 0
+        var size = MemoryLayout<UInt64>.size
+        if sysctlbyname("hw.cpufrequency", &freq, &size, nil, 0) == 0 {
+            metrics.cpuFrequencyMHz = Int(freq / 1_000_000)
+        } else {
+            // Try to get nominal frequency
+            if sysctlbyname("hw.cpufrequency_max", &freq, &size, nil, 0) == 0 {
+                metrics.cpuFrequencyMHz = Int(freq / 1_000_000)
+            }
+        }
+    }
+
+    private func updateSSDHealth() {
+        // Try to get SSD health using IOKit SMART data
+        var iterator: io_iterator_t = 0
+        let matchDict = IOServiceMatching("IONVMeController")
+        guard IOServiceGetMatchingServices(kIOMainPortDefault, matchDict, &iterator) == kIOReturnSuccess else { return }
+        defer { IOObjectRelease(iterator) }
+
+        var service = IOIteratorNext(iterator)
+        while service != 0 {
+            var properties: Unmanaged<CFMutableDictionary>?
+            if IORegistryEntryCreateCFProperties(service, &properties, kCFAllocatorDefault, 0) == kIOReturnSuccess,
+               let props = properties?.takeRetainedValue() as? [String: Any] {
+                // Look for wear level or life remaining
+                if let smartData = props["SMART Data"] as? [String: Any],
+                   let lifeRemaining = smartData["Life Remaining"] as? Int {
+                    metrics.ssdHealthPercent = lifeRemaining
+                }
+            }
+            IOObjectRelease(service)
+            service = IOIteratorNext(iterator)
+        }
+
+        // Alternative: try to get from NVMe SMART attributes via diskutil
+        if metrics.ssdHealthPercent < 0 {
+            // Use a simpler approach - check IOAHCIBlockStorageDevice
+            var ahciIterator: io_iterator_t = 0
+            let ahciMatch = IOServiceMatching("IOAHCIBlockStorageDevice")
+            if IOServiceGetMatchingServices(kIOMainPortDefault, ahciMatch, &ahciIterator) == kIOReturnSuccess {
+                defer { IOObjectRelease(ahciIterator) }
+                var ahciService = IOIteratorNext(ahciIterator)
+                while ahciService != 0 {
+                    var props: Unmanaged<CFMutableDictionary>?
+                    if IORegistryEntryCreateCFProperties(ahciService, &props, kCFAllocatorDefault, 0) == kIOReturnSuccess,
+                       let properties = props?.takeRetainedValue() as? [String: Any],
+                       let smartCapable = properties["SMART Capable"] as? Bool, smartCapable {
+                        // Device supports SMART
+                        if let smartStatus = properties["SMART Status"] as? String {
+                            metrics.ssdHealthPercent = smartStatus == "Verified" ? 100 : 50
+                        }
+                    }
+                    IOObjectRelease(ahciService)
+                    ahciService = IOIteratorNext(ahciIterator)
+                }
+            }
+        }
     }
 }
 
@@ -737,7 +874,13 @@ class ContentView: NSView {
         String(format: "%.1f%%", m.cpu).draw(at: NSPoint(x: pad + 14, y: y + cpuH - 36), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 26, weight: .bold), .foregroundColor: cpuColor])
         L10n.cpu.draw(at: NSPoint(x: pad + 14, y: y + cpuH - 52), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
         m.cpuModel.replacingOccurrences(of: "Apple ", with: "").draw(at: NSPoint(x: pad + 14, y: y + 16), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text2])
-        "\(m.cpuCores) \(L10n.cores)".draw(at: NSPoint(x: pad + 14, y: y + 2), withAttributes: [.font: NSFont.systemFont(ofSize: 10, weight: .regular), .foregroundColor: Theme.text3])
+        // Cores and frequency
+        var coreInfo = "\(m.cpuCores) \(L10n.cores)"
+        if m.cpuFrequencyMHz > 0 {
+            let ghz = Double(m.cpuFrequencyMHz) / 1000.0
+            coreInfo += String(format: " • %.1f GHz", ghz)
+        }
+        coreInfo.draw(at: NSPoint(x: pad + 14, y: y + 2), withAttributes: [.font: NSFont.systemFont(ofSize: 10, weight: .regular), .foregroundColor: Theme.text3])
         if m.cpuTemp > 0 {
             let tc = m.cpuTemp > 85 ? Theme.danger : (m.cpuTemp > 70 ? Theme.warning : Theme.temp)
             tc.withAlphaComponent(0.15).setFill()
@@ -815,6 +958,13 @@ class ContentView: NSView {
         String(format: "%.0f%%", m.diskUsed).draw(at: NSPoint(x: pad + 14, y: y + diskH - 30), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 22, weight: .bold), .foregroundColor: diskColor])
         // "Disk" label below percentage
         L10n.disk.draw(at: NSPoint(x: pad + 14, y: y + diskH - 48), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
+        // SSD Health badge (if available)
+        if m.ssdHealthPercent >= 0 {
+            let healthColor = m.ssdHealthPercent > 80 ? Theme.batt : (m.ssdHealthPercent > 50 ? Theme.warning : Theme.danger)
+            healthColor.withAlphaComponent(0.15).setFill()
+            NSBezierPath(roundedRect: NSRect(x: pad + 95, y: y + diskH - 36, width: 75, height: 24), xRadius: 6, yRadius: 6).fill()
+            "\(L10n.ssdHealth): \(m.ssdHealthPercent)%".draw(at: NSPoint(x: pad + 100, y: y + diskH - 34), withAttributes: [.font: NSFont.systemFont(ofSize: 10, weight: .bold), .foregroundColor: healthColor])
+        }
         // GB info
         String(format: "%.0f GB \(L10n.freeOf) %.0f GB", Double(m.diskFree)/(1024*1024*1024), Double(m.diskTotal)/(1024*1024*1024)).draw(at: NSPoint(x: pad + 14, y: y + 16), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text2])
         // Disk name at bottom
@@ -864,21 +1014,32 @@ class ContentView: NSView {
             y -= gap
         }
 
-        // SYSTEM - 68px
-        let sysH: CGFloat = 68
+        // SYSTEM - 88px (increased to fit brightness/power)
+        let sysH: CGFloat = 88
         y -= sysH
         let sysRect = NSRect(x: pad, y: y, width: w, height: sysH)
         cardRects[.system] = sysRect
         drawCard(x: pad, y: y, w: w, h: sysH)
         L10n.system.draw(at: NSPoint(x: pad + 14, y: y + sysH - 16), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
-        String(format: "\(L10n.load): %.2f  %.2f  %.2f", m.loadAvg.0, m.loadAvg.1, m.loadAvg.2).draw(at: NSPoint(x: pad + 14, y: y + 30), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium), .foregroundColor: Theme.system])
-        "\(L10n.processes): \(m.processCount)".draw(at: NSPoint(x: pad + 220, y: y + 30), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium), .foregroundColor: Theme.text2])
+        String(format: "\(L10n.load): %.2f  %.2f  %.2f", m.loadAvg.0, m.loadAvg.1, m.loadAvg.2).draw(at: NSPoint(x: pad + 14, y: y + 50), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium), .foregroundColor: Theme.system])
+        "\(L10n.processes): \(m.processCount)".draw(at: NSPoint(x: pad + 220, y: y + 50), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium), .foregroundColor: Theme.text2])
         if m.swapUsed > 0 {
-            String(format: "\(L10n.swap): %.1f / %.1f GB", Double(m.swapUsed)/(1024*1024*1024), Double(m.swapTotal)/(1024*1024*1024)).draw(at: NSPoint(x: pad + 14, y: y + 10), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text2])
+            String(format: "\(L10n.swap): %.1f / %.1f GB", Double(m.swapUsed)/(1024*1024*1024), Double(m.swapTotal)/(1024*1024*1024)).draw(at: NSPoint(x: pad + 14, y: y + 30), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text2])
         } else {
-            "\(L10n.swap): \(L10n.notInUse)".draw(at: NSPoint(x: pad + 14, y: y + 10), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text3])
+            "\(L10n.swap): \(L10n.notInUse)".draw(at: NSPoint(x: pad + 14, y: y + 30), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text3])
         }
-        "\(L10n.kernel): \(m.kernelVersion)".draw(at: NSPoint(x: pad + 220, y: y + 10), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text3])
+        "\(L10n.kernel): \(m.kernelVersion)".draw(at: NSPoint(x: pad + 220, y: y + 30), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text3])
+        // Brightness and power on bottom row
+        var bottomInfo: [String] = []
+        if m.screenBrightness >= 0 {
+            bottomInfo.append("\(L10n.brightness): \(Int(m.screenBrightness))%")
+        }
+        if m.powerWatts > 0 {
+            bottomInfo.append(String(format: "\(L10n.powerUsage): %.1fW", m.powerWatts))
+        }
+        if !bottomInfo.isEmpty {
+            bottomInfo.joined(separator: "  •  ").draw(at: NSPoint(x: pad + 14, y: y + 8), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 10, weight: .medium), .foregroundColor: Theme.text3])
+        }
     }
 
     func drawCard(x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat) {
@@ -1053,7 +1214,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let hasFans = !monitor.metrics.fanSpeed.isEmpty
-        let height: CGFloat = hasFans ? 752 : 696
+        let height: CGFloat = hasFans ? 772 : 716
 
         panel = BorderlessPanel(contentRect: NSRect(x: 0, y: 0, width: 380, height: height))
 
@@ -1217,7 +1378,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         } else if let btn = statusItem.button, let btnWindow = btn.window {
             let hasFans = !monitor.metrics.fanSpeed.isEmpty
-            let height: CGFloat = hasFans ? 752 : 696
+            let height: CGFloat = hasFans ? 772 : 716
 
             // Position panel below the menu bar button
             let btnRect = btn.convert(btn.bounds, to: nil)
