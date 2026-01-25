@@ -1,6 +1,6 @@
 # SystemPulse
 
-🇹🇷 [Türkçe](README_TR.md)
+🌍 **Localized in 7 languages:** 🇺🇸 English | 🇹🇷 [Türkçe](README_TR.md) | 🇩🇪 Deutsch | 🇫🇷 Français | 🇪🇸 Español | 🇯🇵 日本語 | 🇨🇳 中文
 
 A lightweight, native macOS menu bar app that displays real-time system metrics with beautiful mini graphs.
 
@@ -21,12 +21,12 @@ A lightweight, native macOS menu bar app that displays real-time system metrics 
 - **Battery monitoring** - Charge level, charging status, time remaining
 - **Fan monitoring** - RPM for each fan (when available)
 - **System info** - Load average, process count, swap usage, kernel version, uptime
+- **Multi-language support** - Choose your language from the menu (7 languages available)
 
 ### Interactive features
 
-- **Hover** over any card to reveal a clickable arrow
-- **Click** to open the corresponding system app (Activity Monitor, Disk Utility, System Settings, etc.)
-- **Right-click** the menu bar icon for a quick menu
+- **Click** any card to open the corresponding system app (Activity Monitor, Disk Utility, System Settings, etc.)
+- **Right-click** the menu bar icon for a quick menu with settings and language selection
 
 ## Requirements
 
@@ -131,9 +131,14 @@ If you created an app bundle (Option 2), you can add it directly to Login Items:
 Once running, SystemPulse appears in your menu bar showing CPU and memory usage.
 
 - **Left-click** the menu bar item to open the detailed panel
-- **Right-click** for a quick menu with Quit option
-- **Hover** over any metric card to see an arrow indicator
+- **Right-click** for a quick menu with settings, language selection, and quit option
 - **Click** a card to open the related system app
+
+### Changing language
+
+1. Right-click the SystemPulse icon in the menu bar
+2. Select **Language** from the menu
+3. Choose your preferred language from the submenu
 
 ## Technical details
 
@@ -149,6 +154,14 @@ SystemPulse uses native macOS APIs for accurate metrics:
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a pull request.
+
+### Adding translations
+
+SystemPulse supports adding new languages easily. To add a new language:
+
+1. Add a new case to the `Language` enum
+2. Add translations for all strings in the `L10n` struct
+3. Submit a pull request
 
 ## License
 

@@ -1,8 +1,10 @@
 # SystemPulse
 
-🇬🇧 [English](README.md)
+🌍 **7 dilde yerelleştirildi:** 🇺🇸 [English](README.md) | 🇹🇷 Türkçe | 🇩🇪 Deutsch | 🇫🇷 Français | 🇪🇸 Español | 🇯🇵 日本語 | 🇨🇳 中文
 
-macOS menü çubuğunda gerçek zamanlı sistem metriklerini güzel mini grafiklerle gösteren hafif, yerli bir macOS uygulaması.
+Gerçek zamanlı sistem metriklerini güzel mini grafiklerle gösteren hafif, yerli bir macOS menü çubuğu uygulaması.
+
+<img width="397" height="715" alt="image" src="https://github.com/user-attachments/assets/6868a0ac-1d01-45aa-84d7-8d21dc0daa6b" />
 
 ![macOS](https://img.shields.io/badge/macOS-14.0%2B-blue)
 ![Swift](https://img.shields.io/badge/Swift-5.9%2B-orange)
@@ -18,40 +20,12 @@ macOS menü çubuğunda gerçek zamanlı sistem metriklerini güzel mini grafikl
 - **Pil izleme** - Şarj seviyesi, şarj durumu, kalan süre
 - **Fan izleme** - Her fan için RPM (varsa)
 - **Sistem bilgisi** - Yük ortalaması, işlem sayısı, swap kullanımı, kernel sürümü, çalışma süresi
+- **Çoklu dil desteği** - Menüden dilinizi seçin (7 dil mevcut)
 
 ### Etkileşimli özellikler
 
-- Tıklanabilir bir ok görmek için herhangi bir kartın üzerine **gelin**
-- İlgili sistem uygulamasını açmak için **tıklayın** (Etkinlik İzleyici, Disk İzlencesi, Sistem Ayarları vb.)
-- Hızlı menü için menü çubuğu simgesine **sağ tıklayın**
-
-## Ekran Görüntüleri
-
-Uygulama, canlı güncellenen mini grafiklerle şık bir koyu panel görüntüler:
-
-```
-┌─────────────────────────────────┐
-│ SystemPulse PRO        ↑ 2g 5s │
-├─────────────────────────────────┤
-│ 12.5%  CPU                 ▁▃▅▂ │
-│ M2 Pro • 12 çekirdek   42°C    │
-├─────────────────────────────────┤
-│ 67.2%  Bellek              ▅▆▇▆ │
-│ 10.8 / 16 GB                   │
-├─────────────────────────────────┤
-│ 8%     GPU                 ▁▁▂▁ │
-│ M2 Pro                         │
-├─────────────────────────────────┤
-│ ↓ 1.2 MB/s  Ağ          ▂▄▁▃ │
-│ ↑ 256 KB/s                     │
-├─────────────────────────────────┤
-│ 85%    Disk                    │
-│ 500 GB'den 120 GB boş          │
-├─────────────────────────────────┤
-│ 72%    Pil                     │
-│ 2s 30dk kaldı                  │
-└─────────────────────────────────┘
-```
+- İlgili sistem uygulamasını açmak için herhangi bir karta **tıklayın** (Etkinlik Monitörü, Disk İzlencesi, Sistem Ayarları vb.)
+- Ayarlar ve dil seçimi olan hızlı menü için menü çubuğu simgesine **sağ tıklayın**
 
 ## Gereksinimler
 
@@ -129,7 +103,7 @@ Bu yöntem, SystemPulse'ın Terminal'den bağımsız çalışmasını sağlar, b
 
 5. Varsayılan metni SystemPulse binary'nizin tam yolu ile değiştirin:
    ```bash
-   /yol/systempulse/SystemPulse
+   /path/to/systempulse/SystemPulse
    ```
    Örneğin, ana klasörünüze klonladıysanız:
    ```bash
@@ -156,22 +130,14 @@ Bir uygulama paketi oluşturduysanız (Seçenek 2), doğrudan Giriş Öğelerine
 Çalıştırıldığında, SystemPulse menü çubuğunuzda CPU ve bellek kullanımını gösteren bir simge olarak görünür.
 
 - Ayrıntılı paneli açmak için menü çubuğu öğesine **sol tıklayın**
-- Çıkış seçeneği olan hızlı menü için **sağ tıklayın**
-- Ok göstergesini görmek için herhangi bir metrik kartının üzerine **gelin**
+- Ayarlar, dil seçimi ve çıkış seçeneği olan hızlı menü için **sağ tıklayın**
 - İlgili sistem uygulamasını açmak için bir karta **tıklayın**
 
-### Kart tıklama eylemleri
+### Dil değiştirme
 
-| Kart | Açılan Uygulama |
-|------|-----------------|
-| CPU | Etkinlik İzleyici |
-| Bellek | Etkinlik İzleyici |
-| GPU | Sistem Bilgisi |
-| Ağ | Ağ Ayarları |
-| Disk | Disk İzlencesi |
-| Pil | Pil Ayarları |
-| Fanlar | Sistem Bilgisi |
-| Sistem | Etkinlik İzleyici |
+1. Menü çubuğundaki SystemPulse simgesine sağ tıklayın
+2. Menüden **Dil**'i seçin
+3. Alt menüden tercih ettiğiniz dili seçin
 
 ## Teknik detaylar
 
@@ -187,6 +153,14 @@ SystemPulse, doğru metrikler için yerli macOS API'lerini kullanır:
 ## Katkıda Bulunma
 
 Katkılarınızı bekliyoruz! Lütfen bir pull request göndermekten çekinmeyin.
+
+### Çeviri ekleme
+
+SystemPulse yeni dillerin kolayca eklenmesini destekler. Yeni bir dil eklemek için:
+
+1. `Language` enum'una yeni bir case ekleyin
+2. `L10n` struct'ındaki tüm stringler için çeviri ekleyin
+3. Bir pull request gönderin
 
 ## Lisans
 

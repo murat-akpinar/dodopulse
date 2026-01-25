@@ -1,12 +1,230 @@
 #!/usr/bin/env swift
 
-// SystemPulse Pro V5 - Fixed Layout
-// Build: swiftc -O -o SystemPulseV5 SystemPulseV5.swift -framework Cocoa -framework IOKit -framework Metal
+// SystemPulse - macOS Menu Bar System Monitor
+// Build: swiftc -O -o SystemPulse SystemPulse.swift -framework Cocoa -framework IOKit -framework Metal
 
 import Cocoa
 import IOKit
 import IOKit.ps
 import Metal
+
+// MARK: - Localization
+
+enum Language: String, CaseIterable {
+    case english = "en"
+    case turkish = "tr"
+    case german = "de"
+    case french = "fr"
+    case spanish = "es"
+    case japanese = "ja"
+    case chinese = "zh"
+
+    var displayName: String {
+        switch self {
+        case .english: return "English"
+        case .turkish: return "Türkçe"
+        case .german: return "Deutsch"
+        case .french: return "Français"
+        case .spanish: return "Español"
+        case .japanese: return "日本語"
+        case .chinese: return "中文"
+        }
+    }
+}
+
+struct L10n {
+    static var current: Language {
+        get {
+            if let code = UserDefaults.standard.string(forKey: "appLanguage"),
+               let lang = Language(rawValue: code) {
+                return lang
+            }
+            // Auto-detect from system
+            let systemLang = Locale.current.language.languageCode?.identifier ?? "en"
+            return Language(rawValue: systemLang) ?? .english
+        }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: "appLanguage") }
+    }
+
+    // All translatable strings
+    static var cpu: String { tr("CPU", "CPU", "CPU", "CPU", "CPU", "CPU", "CPU") }
+    static var memory: String { tr("Memory", "Bellek", "Speicher", "Mémoire", "Memoria", "メモリ", "内存") }
+    static var gpu: String { tr("GPU", "GPU", "GPU", "GPU", "GPU", "GPU", "GPU") }
+    static var network: String { tr("Network", "Ağ", "Netzwerk", "Réseau", "Red", "ネットワーク", "网络") }
+    static var disk: String { tr("Disk", "Disk", "Festplatte", "Disque", "Disco", "ディスク", "磁盘") }
+    static var battery: String { tr("Battery", "Pil", "Akku", "Batterie", "Batería", "バッテリー", "电池") }
+    static var charging: String { tr("Charging", "Şarj oluyor", "Lädt", "En charge", "Cargando", "充電中", "充电中") }
+    static var fans: String { tr("Fans", "Fanlar", "Lüfter", "Ventilateurs", "Ventiladores", "ファン", "风扇") }
+    static var system: String { tr("System", "Sistem", "System", "Système", "Sistema", "システム", "系统") }
+    static var temperature: String { tr("Temperature", "Sıcaklık", "Temperatur", "Température", "Temperatura", "温度", "温度") }
+    static var cores: String { tr("cores", "çekirdek", "Kerne", "cœurs", "núcleos", "コア", "核心") }
+    static var processes: String { tr("Processes", "İşlemler", "Prozesse", "Processus", "Procesos", "プロセス", "进程") }
+    static var uptime: String { tr("Uptime", "Çalışma süresi", "Laufzeit", "Temps de fonctionnement", "Tiempo activo", "稼働時間", "运行时间") }
+    static var localIP: String { tr("Local", "Yerel", "Lokal", "Local", "Local", "ローカル", "本地") }
+    static var publicIP: String { tr("Public", "Genel", "Öffentlich", "Publique", "Pública", "パブリック", "公网") }
+    static var session: String { tr("Session", "Oturum", "Sitzung", "Session", "Sesión", "セッション", "会话") }
+    static var freeOf: String { tr("free of", "boş /", "frei von", "libre sur", "libre de", "空き/", "可用/") }
+    static var remaining: String { tr("remaining", "kaldı", "verbleibend", "restant", "restante", "残り", "剩余") }
+    static var connectedToPower: String { tr("Connected to power", "Güce bağlı", "Mit Strom verbunden", "Connecté au secteur", "Conectado a la corriente", "電源に接続", "已连接电源") }
+    static var notInUse: String { tr("Not in use", "Kullanılmıyor", "Nicht verwendet", "Non utilisé", "No en uso", "未使用", "未使用") }
+    static var showCPUMemory: String { tr("Show CPU/Memory in menu bar", "Menü çubuğunda CPU/Bellek göster", "CPU/Speicher in Menüleiste anzeigen", "Afficher CPU/Mémoire dans la barre de menu", "Mostrar CPU/Memoria en barra de menú", "メニューバーにCPU/メモリを表示", "在菜单栏显示CPU/内存") }
+    static var language: String { tr("Language", "Dil", "Sprache", "Langue", "Idioma", "言語", "语言") }
+    static var about: String { tr("About SystemPulse", "SystemPulse Hakkında", "Über SystemPulse", "À propos de SystemPulse", "Acerca de SystemPulse", "SystemPulseについて", "关于SystemPulse") }
+    static var quit: String { tr("Quit", "Çıkış", "Beenden", "Quitter", "Salir", "終了", "退出") }
+    static var power: String { tr("Power", "Güç", "Strom", "Alimentation", "Energía", "電源", "电源") }
+    static var connectedToAdapter: String { tr("Connected to power adapter", "Güç adaptörüne bağlı", "Mit Netzteil verbunden", "Connecté à l'adaptateur", "Conectado al adaptador", "電源アダプタに接続", "已连接电源适配器") }
+    static var fan: String { tr("Fan", "Fan", "Lüfter", "Ventilateur", "Ventilador", "ファン", "风扇") }
+    static var load: String { tr("Load", "Yük", "Last", "Charge", "Carga", "負荷", "负载") }
+    static var swap: String { tr("Swap", "Takas", "Swap", "Swap", "Intercambio", "スワップ", "交换") }
+    static var kernel: String { tr("Kernel", "Çekirdek", "Kernel", "Noyau", "Kernel", "カーネル", "内核") }
+
+    private static func tr(_ en: String, _ tr: String, _ de: String, _ fr: String, _ es: String, _ ja: String, _ zh: String) -> String {
+        switch current {
+        case .english: return en
+        case .turkish: return tr
+        case .german: return de
+        case .french: return fr
+        case .spanish: return es
+        case .japanese: return ja
+        case .chinese: return zh
+        }
+    }
+}
+
+// MARK: - Lucide Icons (drawn programmatically)
+
+struct LucideIcons {
+    // Draw a CPU/chip icon
+    static func cpu(size: CGFloat = 16, color: NSColor = .white) -> NSImage {
+        let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
+            color.setStroke()
+            let path = NSBezierPath()
+            path.lineWidth = 1.2
+
+            // Main chip body
+            let inset: CGFloat = size * 0.2
+            let body = NSRect(x: inset, y: inset, width: size - inset * 2, height: size - inset * 2)
+            path.appendRoundedRect(body, xRadius: 2, yRadius: 2)
+
+            // Pins on each side
+            let pinLen: CGFloat = size * 0.15
+            let pinGap: CGFloat = size * 0.2
+            // Top pins
+            for i in 0..<2 {
+                let x = inset + pinGap + CGFloat(i) * pinGap * 1.5
+                path.move(to: NSPoint(x: x, y: size - inset))
+                path.line(to: NSPoint(x: x, y: size - inset + pinLen))
+            }
+            // Bottom pins
+            for i in 0..<2 {
+                let x = inset + pinGap + CGFloat(i) * pinGap * 1.5
+                path.move(to: NSPoint(x: x, y: inset))
+                path.line(to: NSPoint(x: x, y: inset - pinLen))
+            }
+            // Left pins
+            for i in 0..<2 {
+                let y = inset + pinGap + CGFloat(i) * pinGap * 1.5
+                path.move(to: NSPoint(x: inset, y: y))
+                path.line(to: NSPoint(x: inset - pinLen, y: y))
+            }
+            // Right pins
+            for i in 0..<2 {
+                let y = inset + pinGap + CGFloat(i) * pinGap * 1.5
+                path.move(to: NSPoint(x: size - inset, y: y))
+                path.line(to: NSPoint(x: size - inset + pinLen, y: y))
+            }
+            path.stroke()
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
+
+    // Draw a memory/RAM icon
+    static func memory(size: CGFloat = 16, color: NSColor = .white) -> NSImage {
+        let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
+            color.setStroke()
+            let path = NSBezierPath()
+            path.lineWidth = 1.2
+
+            // RAM stick body
+            let body = NSRect(x: 2, y: size * 0.3, width: size - 4, height: size * 0.4)
+            path.appendRoundedRect(body, xRadius: 1, yRadius: 1)
+
+            // Chips on RAM
+            for i in 0..<3 {
+                let x = 4 + CGFloat(i) * (size - 8) / 3
+                let chip = NSRect(x: x, y: size * 0.35, width: (size - 12) / 4, height: size * 0.3)
+                path.appendRect(chip)
+            }
+
+            // Bottom pins
+            for i in 0..<5 {
+                let x = 3 + CGFloat(i) * (size - 6) / 5
+                path.move(to: NSPoint(x: x, y: size * 0.3))
+                path.line(to: NSPoint(x: x, y: size * 0.15))
+            }
+            path.stroke()
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
+
+    // Draw a monitor icon (for menu bar)
+    static func monitor(size: CGFloat = 18, color: NSColor = .white) -> NSImage {
+        let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
+            color.setStroke()
+            let path = NSBezierPath()
+            path.lineWidth = 1.5
+
+            // Screen
+            let screen = NSRect(x: 2, y: 5, width: size - 4, height: size - 7)
+            path.appendRoundedRect(screen, xRadius: 1.5, yRadius: 1.5)
+
+            // Stand
+            path.move(to: NSPoint(x: size / 2, y: 5))
+            path.line(to: NSPoint(x: size / 2, y: 3))
+
+            // Base
+            path.move(to: NSPoint(x: size * 0.3, y: 3))
+            path.line(to: NSPoint(x: size * 0.7, y: 3))
+
+            path.lineCapStyle = .round
+            path.stroke()
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
+
+    // Draw a thermometer icon
+    static func thermometer(size: CGFloat = 16, color: NSColor = .white) -> NSImage {
+        let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
+            color.setStroke()
+            let path = NSBezierPath()
+            path.lineWidth = 1.2
+
+            // Thermometer body
+            let cx = size / 2
+            path.move(to: NSPoint(x: cx - 2, y: size - 3))
+            path.line(to: NSPoint(x: cx - 2, y: 6))
+            path.appendArc(withCenter: NSPoint(x: cx, y: 4), radius: 3, startAngle: 180, endAngle: 0, clockwise: true)
+            path.line(to: NSPoint(x: cx + 2, y: size - 3))
+            path.appendArc(withCenter: NSPoint(x: cx, y: size - 3), radius: 2, startAngle: 0, endAngle: 180, clockwise: true)
+            path.close()
+            path.stroke()
+
+            // Mercury bulb
+            color.setFill()
+            NSBezierPath(ovalIn: NSRect(x: cx - 2, y: 2, width: 4, height: 4)).fill()
+
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
+}
 
 // MARK: - Settings
 
@@ -78,8 +296,31 @@ class SMCService {
 
     deinit { if isConnected { IOServiceClose(connection) } }
 
-    func getCPUTemperature() -> Double? { return readTemperature(key: "TC0P") }
-    func getGPUTemperature() -> Double? { return readTemperature(key: "TG0P") }
+    func getCPUTemperature() -> Double? {
+        // Try multiple keys for different Mac models
+        // Apple Silicon: Tp09, Tp0T, Tp01, Tp05
+        // Intel: TC0P, TC0H, TC0D, TC0E, TC0F
+        let keys = ["Tp09", "Tp0T", "Tp01", "Tp05", "TC0P", "TC0H", "TC0D", "TC0E", "TC0F"]
+        for key in keys {
+            if let temp = readTemperature(key: key), temp > 0 && temp < 120 {
+                return temp
+            }
+        }
+        return nil
+    }
+
+    func getGPUTemperature() -> Double? {
+        // Apple Silicon: Tg0f, Tg0j
+        // Intel: TG0P, TG0H, TG0D
+        let keys = ["Tg0f", "Tg0j", "TG0P", "TG0H", "TG0D"]
+        for key in keys {
+            if let temp = readTemperature(key: key), temp > 0 && temp < 120 {
+                return temp
+            }
+        }
+        return nil
+    }
+
     func getFanSpeed(fan: Int) -> Int? { return readFanRPM(key: fan == 0 ? "F0Ac" : "F1Ac") }
 
     private func readTemperature(key: String) -> Double? {
@@ -112,6 +353,63 @@ class SMCService {
         var result: UInt32 = 0
         for (i, char) in str.prefix(4).enumerated() { result |= UInt32(char.asciiValue ?? 0) << (24 - i * 8) }
         return result
+    }
+}
+
+// MARK: - Apple Silicon Thermal (alternative method)
+
+class AppleSiliconThermal {
+    // Try to get temperature from IOHIDService for Apple Silicon
+    static func getCPUTemperature() -> Double? {
+        var iterator: io_iterator_t = 0
+
+        // Try AppleARMIODevice for M-series chips
+        let matchingDict = IOServiceMatching("AppleARMIODevice")
+        guard IOServiceGetMatchingServices(kIOMainPortDefault, matchingDict, &iterator) == kIOReturnSuccess else { return nil }
+        defer { IOObjectRelease(iterator) }
+
+        var service = IOIteratorNext(iterator)
+        while service != 0 {
+            var properties: Unmanaged<CFMutableDictionary>?
+            if IORegistryEntryCreateCFProperties(service, &properties, kCFAllocatorDefault, 0) == kIOReturnSuccess,
+               let props = properties?.takeRetainedValue() as? [String: Any] {
+                // Look for temperature in properties
+                if let temp = props["temperature"] as? Double, temp > 0 && temp < 150 {
+                    IOObjectRelease(service)
+                    return temp
+                }
+                if let temp = props["die-temperature"] as? Double, temp > 0 && temp < 150 {
+                    IOObjectRelease(service)
+                    return temp
+                }
+            }
+            IOObjectRelease(service)
+            service = IOIteratorNext(iterator)
+        }
+
+        // Try thermal-sensors
+        var iterator2: io_iterator_t = 0
+        let matchingDict2 = IOServiceMatching("IOHIDEventService")
+        guard IOServiceGetMatchingServices(kIOMainPortDefault, matchingDict2, &iterator2) == kIOReturnSuccess else { return nil }
+        defer { IOObjectRelease(iterator2) }
+
+        service = IOIteratorNext(iterator2)
+        while service != 0 {
+            var properties: Unmanaged<CFMutableDictionary>?
+            if IORegistryEntryCreateCFProperties(service, &properties, kCFAllocatorDefault, 0) == kIOReturnSuccess,
+               let props = properties?.takeRetainedValue() as? [String: Any],
+               let primaryUsagePage = props["PrimaryUsagePage"] as? Int,
+               primaryUsagePage == 0xFF00 { // Vendor-specific
+                if let temp = props["Temperature"] as? Double, temp > 0 && temp < 150 {
+                    IOObjectRelease(service)
+                    return temp
+                }
+            }
+            IOObjectRelease(service)
+            service = IOIteratorNext(iterator2)
+        }
+
+        return nil
     }
 }
 
@@ -312,8 +610,18 @@ class Monitor {
     }
 
     private func updateSensors() {
-        if let temp = smc.getCPUTemperature() { metrics.cpuTemp = temp }
-        if let temp = smc.getGPUTemperature() { metrics.gpuTemp = temp }
+        // Try SMC first (Intel Macs and some Apple Silicon)
+        if let temp = smc.getCPUTemperature() {
+            metrics.cpuTemp = temp
+        } else if let temp = AppleSiliconThermal.getCPUTemperature() {
+            // Fallback to Apple Silicon thermal reading
+            metrics.cpuTemp = temp
+        }
+
+        if let temp = smc.getGPUTemperature() {
+            metrics.gpuTemp = temp
+        }
+
         metrics.fanSpeed = []
         for i in 0..<2 { if let rpm = smc.getFanSpeed(fan: i), rpm > 0 { metrics.fanSpeed.append(rpm) } }
     }
@@ -368,35 +676,7 @@ class ContentView: NSView {
     var metrics: Metrics?
     let pad: CGFloat = 16
     let gap: CGFloat = 8
-    var hoveredCard: CardType?
     var cardRects: [CardType: NSRect] = [:]
-    var trackingArea: NSTrackingArea?
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        if let existing = trackingArea { removeTrackingArea(existing) }
-        trackingArea = NSTrackingArea(rect: bounds, options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways], owner: self, userInfo: nil)
-        addTrackingArea(trackingArea!)
-    }
-
-    override func mouseMoved(with event: NSEvent) {
-        let loc = convert(event.locationInWindow, from: nil)
-        var newHover: CardType? = nil
-        for (card, rect) in cardRects {
-            if rect.contains(loc) { newHover = card; break }
-        }
-        if newHover != hoveredCard {
-            hoveredCard = newHover
-            needsDisplay = true
-        }
-    }
-
-    override func mouseExited(with event: NSEvent) {
-        if hoveredCard != nil {
-            hoveredCard = nil
-            needsDisplay = true
-        }
-    }
 
     override func mouseDown(with event: NSEvent) {
         let loc = convert(event.locationInWindow, from: nil)
@@ -440,12 +720,11 @@ class ContentView: NSView {
         let cpuRect = NSRect(x: pad, y: y, width: w, height: cpuH)
         cardRects[.cpu] = cpuRect
         drawCardGlow(x: pad, y: y, w: w, h: cpuH, color: Theme.cpu, intensity: m.cpu / 100)
-        if hoveredCard == .cpu { drawHoverArrow(in: cpuRect) }
         let cpuColor = m.cpu > 90 ? Theme.danger : (m.cpu > 70 ? Theme.warning : Theme.cpu)
         String(format: "%.1f%%", m.cpu).draw(at: NSPoint(x: pad + 14, y: y + cpuH - 36), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 26, weight: .bold), .foregroundColor: cpuColor])
-        "CPU".draw(at: NSPoint(x: pad + 14, y: y + cpuH - 52), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
+        L10n.cpu.draw(at: NSPoint(x: pad + 14, y: y + cpuH - 52), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
         m.cpuModel.replacingOccurrences(of: "Apple ", with: "").draw(at: NSPoint(x: pad + 14, y: y + 16), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text2])
-        "\(m.cpuCores) cores".draw(at: NSPoint(x: pad + 14, y: y + 2), withAttributes: [.font: NSFont.systemFont(ofSize: 10, weight: .regular), .foregroundColor: Theme.text3])
+        "\(m.cpuCores) \(L10n.cores)".draw(at: NSPoint(x: pad + 14, y: y + 2), withAttributes: [.font: NSFont.systemFont(ofSize: 10, weight: .regular), .foregroundColor: Theme.text3])
         if m.cpuTemp > 0 {
             let tc = m.cpuTemp > 85 ? Theme.danger : (m.cpuTemp > 70 ? Theme.warning : Theme.temp)
             tc.withAlphaComponent(0.15).setFill()
@@ -461,10 +740,9 @@ class ContentView: NSView {
         let memRect = NSRect(x: pad, y: y, width: w, height: memH)
         cardRects[.memory] = memRect
         drawCardGlow(x: pad, y: y, w: w, h: memH, color: Theme.mem, intensity: m.mem / 100)
-        if hoveredCard == .memory { drawHoverArrow(in: memRect) }
         let memColor = m.mem > 90 ? Theme.danger : (m.mem > 75 ? Theme.warning : Theme.mem)
         String(format: "%.1f%%", m.mem).draw(at: NSPoint(x: pad + 14, y: y + memH - 36), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 26, weight: .bold), .foregroundColor: memColor])
-        "Memory".draw(at: NSPoint(x: pad + 14, y: y + memH - 52), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
+        L10n.memory.draw(at: NSPoint(x: pad + 14, y: y + memH - 52), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
         String(format: "%.1f / %.0f GB", Double(m.memUsed)/(1024*1024*1024), Double(m.memTotal)/(1024*1024*1024)).draw(at: NSPoint(x: pad + 14, y: y + 16), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text2])
         String(format: "Act: %.1fG  Wire: %.1fG  Comp: %.1fG", Double(m.memActive)/(1024*1024*1024), Double(m.memWired)/(1024*1024*1024), Double(m.memCompressed)/(1024*1024*1024)).draw(at: NSPoint(x: pad + 14, y: y + 2), withAttributes: [.font: NSFont.systemFont(ofSize: 9, weight: .regular), .foregroundColor: Theme.text3])
         drawSparkline(m.memHistory, x: pad + w - 115, y: y + 6, w: 105, h: memH - 12, color: Theme.mem)
@@ -476,9 +754,8 @@ class ContentView: NSView {
         let gpuRect = NSRect(x: pad, y: y, width: w, height: gpuH)
         cardRects[.gpu] = gpuRect
         drawCardGlow(x: pad, y: y, w: w, h: gpuH, color: Theme.gpu, intensity: m.gpu / 100)
-        if hoveredCard == .gpu { drawHoverArrow(in: gpuRect) }
         String(format: "%.0f%%", m.gpu).draw(at: NSPoint(x: pad + 14, y: y + gpuH - 36), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 26, weight: .bold), .foregroundColor: Theme.gpu])
-        "GPU".draw(at: NSPoint(x: pad + 14, y: y + gpuH - 52), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
+        L10n.gpu.draw(at: NSPoint(x: pad + 14, y: y + gpuH - 52), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
         m.gpuName.replacingOccurrences(of: "Apple ", with: "").draw(at: NSPoint(x: pad + 14, y: y + 16), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text2])
         if m.gpuTemp > 0 {
             let gt = m.gpuTemp > 85 ? Theme.danger : (m.gpuTemp > 70 ? Theme.warning : Theme.temp)
@@ -495,17 +772,16 @@ class ContentView: NSView {
         let netRect = NSRect(x: pad, y: y, width: w, height: netH)
         cardRects[.network] = netRect
         drawCardGlow(x: pad, y: y, w: w, h: netH, color: Theme.net, intensity: min((m.netIn + m.netOut) / 10000000, 1.0))
-        if hoveredCard == .network { drawHoverArrow(in: netRect) }
-        "Network".draw(at: NSPoint(x: pad + 14, y: y + netH - 16), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
+        L10n.network.draw(at: NSPoint(x: pad + 14, y: y + netH - 16), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
         "↓".draw(at: NSPoint(x: pad + 14, y: y + 56), withAttributes: [.font: NSFont.systemFont(ofSize: 18, weight: .bold), .foregroundColor: Theme.net])
         formatSpeed(m.netIn).draw(at: NSPoint(x: pad + 34, y: y + 58), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 16, weight: .bold), .foregroundColor: Theme.net])
         "↑".draw(at: NSPoint(x: pad + 14, y: y + 32), withAttributes: [.font: NSFont.systemFont(ofSize: 18, weight: .bold), .foregroundColor: Theme.netUp])
         formatSpeed(m.netOut).draw(at: NSPoint(x: pad + 34, y: y + 34), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 16, weight: .bold), .foregroundColor: Theme.netUp])
-        "Session: ↓\(formatBytes(m.netTotalIn))  ↑\(formatBytes(m.netTotalOut))".draw(at: NSPoint(x: pad + 14, y: y + 8), withAttributes: [.font: NSFont.systemFont(ofSize: 10, weight: .regular), .foregroundColor: Theme.text3])
+        "\(L10n.session): ↓\(formatBytes(m.netTotalIn))  ↑\(formatBytes(m.netTotalOut))".draw(at: NSPoint(x: pad + 14, y: y + 8), withAttributes: [.font: NSFont.systemFont(ofSize: 10, weight: .regular), .foregroundColor: Theme.text3])
         // IPs on right - positioned above the graph
-        "Local:".draw(at: NSPoint(x: pad + 175, y: y + netH - 30), withAttributes: [.font: NSFont.systemFont(ofSize: 10, weight: .medium), .foregroundColor: Theme.text3])
+        "\(L10n.localIP):".draw(at: NSPoint(x: pad + 175, y: y + netH - 30), withAttributes: [.font: NSFont.systemFont(ofSize: 10, weight: .medium), .foregroundColor: Theme.text3])
         m.localIP.draw(at: NSPoint(x: pad + 215, y: y + netH - 30), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular), .foregroundColor: Theme.text2])
-        "Public:".draw(at: NSPoint(x: pad + 175, y: y + netH - 48), withAttributes: [.font: NSFont.systemFont(ofSize: 10, weight: .medium), .foregroundColor: Theme.text3])
+        "\(L10n.publicIP):".draw(at: NSPoint(x: pad + 175, y: y + netH - 48), withAttributes: [.font: NSFont.systemFont(ofSize: 10, weight: .medium), .foregroundColor: Theme.text3])
         m.externalIP.draw(at: NSPoint(x: pad + 215, y: y + netH - 48), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .regular), .foregroundColor: Theme.text2])
         // Graph at bottom right
         drawSparkline(m.netHistory, x: pad + w - 115, y: y + 6, w: 105, h: 40, color: Theme.net)
@@ -517,14 +793,13 @@ class ContentView: NSView {
         let diskRect = NSRect(x: pad, y: y, width: w, height: diskH)
         cardRects[.disk] = diskRect
         drawCard(x: pad, y: y, w: w, h: diskH)
-        if hoveredCard == .disk { drawHoverArrow(in: diskRect) }
         let diskColor = m.diskUsed > 90 ? Theme.danger : (m.diskUsed > 75 ? Theme.warning : Theme.disk)
         // Percentage at top
         String(format: "%.0f%%", m.diskUsed).draw(at: NSPoint(x: pad + 14, y: y + diskH - 30), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 22, weight: .bold), .foregroundColor: diskColor])
         // "Disk" label below percentage
-        "Disk".draw(at: NSPoint(x: pad + 14, y: y + diskH - 48), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
+        L10n.disk.draw(at: NSPoint(x: pad + 14, y: y + diskH - 48), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
         // GB info
-        String(format: "%.0f GB free of %.0f GB", Double(m.diskFree)/(1024*1024*1024), Double(m.diskTotal)/(1024*1024*1024)).draw(at: NSPoint(x: pad + 14, y: y + 16), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text2])
+        String(format: "%.0f GB \(L10n.freeOf) %.0f GB", Double(m.diskFree)/(1024*1024*1024), Double(m.diskTotal)/(1024*1024*1024)).draw(at: NSPoint(x: pad + 14, y: y + 16), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text2])
         // Disk name at bottom
         m.diskName.draw(at: NSPoint(x: pad + 14, y: y + 2), withAttributes: [.font: NSFont.systemFont(ofSize: 10, weight: .regular), .foregroundColor: Theme.text3])
         // Progress bar on right side
@@ -537,22 +812,24 @@ class ContentView: NSView {
         let battRect = NSRect(x: pad, y: y, width: w, height: battH)
         cardRects[.battery] = battRect
         drawCard(x: pad, y: y, w: w, h: battH)
-        if hoveredCard == .battery { drawHoverArrow(in: battRect) }
         if m.hasBatt {
             let battColor = m.battCharging ? Theme.accent : (m.battLevel < 20 ? Theme.danger : (m.battLevel < 40 ? Theme.warning : Theme.batt))
-            "\(Int(m.battLevel))%".draw(at: NSPoint(x: pad + 14, y: y + battH - 32), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 22, weight: .bold), .foregroundColor: battColor])
-            (m.battCharging ? "Charging" : "Battery").draw(at: NSPoint(x: pad + 90, y: y + battH - 26), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
+            // Percentage at top
+            "\(Int(m.battLevel))%".draw(at: NSPoint(x: pad + 14, y: y + battH - 30), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 22, weight: .bold), .foregroundColor: battColor])
+            // Label below percentage
+            (m.battCharging ? L10n.charging : L10n.battery).draw(at: NSPoint(x: pad + 14, y: y + battH - 48), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
+            // Time remaining or status
             if m.battTimeRemaining > 0 && !m.battCharging {
                 let h = m.battTimeRemaining / 60, mn = m.battTimeRemaining % 60
-                (h > 0 ? "\(h)h \(mn)m remaining" : "\(mn)m remaining").draw(at: NSPoint(x: pad + 14, y: y + 26), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text2])
+                (h > 0 ? "\(h)h \(mn)m \(L10n.remaining)" : "\(mn)m \(L10n.remaining)").draw(at: NSPoint(x: pad + 14, y: y + 16), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text2])
             } else if m.battCharging {
-                "Connected to power".draw(at: NSPoint(x: pad + 14, y: y + 26), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.accent])
+                L10n.connectedToPower.draw(at: NSPoint(x: pad + 14, y: y + 16), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.accent])
             }
-            drawProgressBar(value: m.battLevel / 100, x: pad + 14, y: y + 8, w: w - 30, h: 12, color: battColor)
+            drawProgressBar(value: m.battLevel / 100, x: pad + 14, y: y + 4, w: w - 30, h: 10, color: battColor)
         } else {
-            "AC".draw(at: NSPoint(x: pad + 14, y: y + battH - 32), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 22, weight: .bold), .foregroundColor: Theme.batt])
-            "Power".draw(at: NSPoint(x: pad + 60, y: y + battH - 26), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
-            "Connected to power adapter".draw(at: NSPoint(x: pad + 14, y: y + 22), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.batt])
+            "AC".draw(at: NSPoint(x: pad + 14, y: y + battH - 30), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 22, weight: .bold), .foregroundColor: Theme.batt])
+            L10n.power.draw(at: NSPoint(x: pad + 14, y: y + battH - 48), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
+            L10n.connectedToAdapter.draw(at: NSPoint(x: pad + 14, y: y + 16), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.batt])
         }
         y -= gap
 
@@ -563,10 +840,9 @@ class ContentView: NSView {
             let fanRect = NSRect(x: pad, y: y, width: w, height: fanH)
             cardRects[.fans] = fanRect
             drawCard(x: pad, y: y, w: w, h: fanH)
-            if hoveredCard == .fans { drawHoverArrow(in: fanRect) }
-            "Fans".draw(at: NSPoint(x: pad + 14, y: y + fanH - 16), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
+            L10n.fans.draw(at: NSPoint(x: pad + 14, y: y + fanH - 16), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
             for (i, rpm) in m.fanSpeed.enumerated() {
-                "Fan \(i + 1): \(rpm) RPM".draw(at: NSPoint(x: pad + 14 + CGFloat(i) * 150, y: y + 8), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 13, weight: .bold), .foregroundColor: Theme.fan])
+                "\(L10n.fan) \(i + 1): \(rpm) RPM".draw(at: NSPoint(x: pad + 14 + CGFloat(i) * 150, y: y + 8), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 13, weight: .bold), .foregroundColor: Theme.fan])
             }
             y -= gap
         }
@@ -577,16 +853,15 @@ class ContentView: NSView {
         let sysRect = NSRect(x: pad, y: y, width: w, height: sysH)
         cardRects[.system] = sysRect
         drawCard(x: pad, y: y, w: w, h: sysH)
-        if hoveredCard == .system { drawHoverArrow(in: sysRect) }
-        "System".draw(at: NSPoint(x: pad + 14, y: y + sysH - 16), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
-        String(format: "Load: %.2f  %.2f  %.2f", m.loadAvg.0, m.loadAvg.1, m.loadAvg.2).draw(at: NSPoint(x: pad + 14, y: y + 30), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium), .foregroundColor: Theme.system])
-        "Processes: \(m.processCount)".draw(at: NSPoint(x: pad + 220, y: y + 30), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium), .foregroundColor: Theme.text2])
+        L10n.system.draw(at: NSPoint(x: pad + 14, y: y + sysH - 16), withAttributes: [.font: NSFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: Theme.text2])
+        String(format: "\(L10n.load): %.2f  %.2f  %.2f", m.loadAvg.0, m.loadAvg.1, m.loadAvg.2).draw(at: NSPoint(x: pad + 14, y: y + 30), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium), .foregroundColor: Theme.system])
+        "\(L10n.processes): \(m.processCount)".draw(at: NSPoint(x: pad + 220, y: y + 30), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 12, weight: .medium), .foregroundColor: Theme.text2])
         if m.swapUsed > 0 {
-            String(format: "Swap: %.1f / %.1f GB", Double(m.swapUsed)/(1024*1024*1024), Double(m.swapTotal)/(1024*1024*1024)).draw(at: NSPoint(x: pad + 14, y: y + 10), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text2])
+            String(format: "\(L10n.swap): %.1f / %.1f GB", Double(m.swapUsed)/(1024*1024*1024), Double(m.swapTotal)/(1024*1024*1024)).draw(at: NSPoint(x: pad + 14, y: y + 10), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text2])
         } else {
-            "Swap: Not in use".draw(at: NSPoint(x: pad + 14, y: y + 10), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text3])
+            "\(L10n.swap): \(L10n.notInUse)".draw(at: NSPoint(x: pad + 14, y: y + 10), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text3])
         }
-        "Kernel: \(m.kernelVersion)".draw(at: NSPoint(x: pad + 220, y: y + 10), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text3])
+        "\(L10n.kernel): \(m.kernelVersion)".draw(at: NSPoint(x: pad + 220, y: y + 10), withAttributes: [.font: NSFont.monospacedSystemFont(ofSize: 11, weight: .medium), .foregroundColor: Theme.text3])
     }
 
     func drawCard(x: CGFloat, y: CGFloat, w: CGFloat, h: CGFloat) {
@@ -786,9 +1061,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem.separator())
 
         // Current readings (non-clickable)
-        cpuMenuItem = NSMenuItem(title: "CPU: ---%", action: nil, keyEquivalent: "")
-        memMenuItem = NSMenuItem(title: "Memory: ---%", action: nil, keyEquivalent: "")
-        tempMenuItem = NSMenuItem(title: "Temperature: ---", action: nil, keyEquivalent: "")
+        cpuMenuItem = NSMenuItem(title: "\(L10n.cpu): ---%", action: nil, keyEquivalent: "")
+        memMenuItem = NSMenuItem(title: "\(L10n.memory): ---%", action: nil, keyEquivalent: "")
+        tempMenuItem = NSMenuItem(title: "\(L10n.temperature): ---", action: nil, keyEquivalent: "")
         menu.addItem(cpuMenuItem)
         menu.addItem(memMenuItem)
         menu.addItem(tempMenuItem)
@@ -796,20 +1071,44 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem.separator())
 
         // Settings toggle for menu bar display
-        showDetailsMenuItem = NSMenuItem(title: "Show CPU/Memory in menu bar", action: #selector(toggleMenuBarDetails), keyEquivalent: "")
+        showDetailsMenuItem = NSMenuItem(title: L10n.showCPUMemory, action: #selector(toggleMenuBarDetails), keyEquivalent: "")
         showDetailsMenuItem.target = self
         showDetailsMenuItem.state = Settings.shared.showMenuBarDetails ? .on : .off
         menu.addItem(showDetailsMenuItem)
 
         menu.addItem(NSMenuItem.separator())
 
+        // Language submenu
+        let languageItem = NSMenuItem(title: L10n.language, action: nil, keyEquivalent: "")
+        let languageMenu = NSMenu()
+        for lang in Language.allCases {
+            let item = NSMenuItem(title: lang.displayName, action: #selector(changeLanguage(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = lang
+            if lang == L10n.current { item.state = .on }
+            languageMenu.addItem(item)
+        }
+        languageItem.submenu = languageMenu
+        menu.addItem(languageItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         // About
-        let aboutItem = NSMenuItem(title: "About SystemPulse", action: #selector(showAbout), keyEquivalent: "")
+        let aboutItem = NSMenuItem(title: L10n.about, action: #selector(showAbout), keyEquivalent: "")
         aboutItem.target = self
         menu.addItem(aboutItem)
 
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: L10n.quit, action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+    }
+
+    @objc func changeLanguage(_ sender: NSMenuItem) {
+        guard let lang = sender.representedObject as? Language else { return }
+        L10n.current = lang
+        // Rebuild menu with new language
+        setupMenu()
+        // Refresh the panel
+        contentView.needsDisplay = true
     }
 
     @objc func showAbout() {
@@ -837,9 +1136,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     func updateMenuBarDisplay() {
         let m = monitor.metrics
 
-        // Update menu bar
+        // Update menu bar with mini icons (using SF Symbols text representation)
         if Settings.shared.showMenuBarDetails {
-            var menuText = " C:\(Int(m.cpu))% M:\(Int(m.mem))%"
+            // Using simple characters that work well in menu bar
+            var menuText = " ▪︎\(Int(m.cpu))% ◦\(Int(m.mem))%"
             if m.cpuTemp > 0 { menuText += " \(Int(m.cpuTemp))°" }
             statusItem.button?.title = menuText
         } else {
@@ -880,6 +1180,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func handleClick() {
         guard let event = NSApp.currentEvent else { return }
         if event.type == .rightMouseUp {
+            // Close panel first if it's open
+            if panel.isVisible {
+                panel.orderOut(nil)
+                if let monitor = eventMonitor {
+                    NSEvent.removeMonitor(monitor)
+                    eventMonitor = nil
+                }
+            }
             statusItem.menu = menu; statusItem.button?.performClick(nil); statusItem.menu = nil
         } else { togglePanel() }
     }
