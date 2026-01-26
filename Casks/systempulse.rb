@@ -1,6 +1,6 @@
 cask "systempulse" do
   version "1.0.0"
-  sha256 "REPLACE_WITH_SHA256_AFTER_UPLOAD"
+  sha256 "a9b6f1587b45b10d580d9e4527f8939ad2d5dc1a22367e55e6f79bf7193d2bad"
 
   url "https://github.com/bluewave-labs/systempulse/releases/download/v#{version}/SystemPulse-#{version}.dmg"
   name "SystemPulse"
