@@ -160,6 +160,25 @@ DodoPulse, doğru metrikler için yerli macOS API'lerini kullanır:
 - **Pil**: IOKit'ten `IOPSCopyPowerSourcesInfo()`
 - **Sıcaklık/Fanlar**: IOKit aracılığıyla SMC (Sistem Yönetim Denetleyicisi)
 
+## Ücretli Alternatiflerle Karşılaştırma
+
+| Özellik | DodoPulse | iStat Menus | TG Pro | Sensei |
+|---------|-----------|-------------|--------|--------|
+| **Fiyat** | Ücretsiz | ~$14 | $10 | $29 |
+| **CPU izleme** | ✓ | ✓ | ✓ | ✓ |
+| **GPU izleme** | ✓ | ✓ | ✓ | ✓ |
+| **Bellek izleme** | ✓ | ✓ | ✗ | ✓ |
+| **Ağ izleme** | ✓ Çoklu arayüz | ✓ Uygulama bazlı | ✗ | ✗ |
+| **Disk izleme** | ✓ | ✓ | ✓ | ✓ |
+| **Pil izleme** | ✓ | ✓ + Bluetooth | ✓ | ✓ |
+| **Fan kontrolü** | ✗ | ✓ | ✓ | ✓ |
+| **Hava durumu** | ✗ | ✓ | ✗ | ✗ |
+| **Optimizasyon araçları** | ✗ | ✗ | ✗ | ✓ |
+| **Açık kaynak** | ✓ | ✗ | ✗ | ✗ |
+| **Tek dosya** | ✓ (~2000 satır) | ✗ | ✗ | ✗ |
+
+**Neden DodoPulse?** Ücretsiz, açık kaynak, hafif (~%1-2 CPU), gizlilik odaklı (analitik yok) ve denetlemesi/değiştirmesi kolay.
+
 ## Katkıda Bulunma
 
 Katkılarınızı bekliyoruz! Lütfen bir pull request göndermekten çekinmeyin.

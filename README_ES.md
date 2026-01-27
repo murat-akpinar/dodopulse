@@ -160,6 +160,25 @@ DodoPulse utiliza APIs nativas de macOS para métricas precisas:
 - **Batería**: `IOPSCopyPowerSourcesInfo()` de IOKit
 - **Temperatura/Ventiladores**: SMC (System Management Controller) vía IOKit
 
+## Comparación con alternativas de pago
+
+| Característica | DodoPulse | iStat Menus | TG Pro | Sensei |
+|----------------|-----------|-------------|--------|--------|
+| **Precio** | Gratis | ~$14 | $10 | $29 |
+| **Monitoreo CPU** | ✓ | ✓ | ✓ | ✓ |
+| **Monitoreo GPU** | ✓ | ✓ | ✓ | ✓ |
+| **Monitoreo memoria** | ✓ | ✓ | ✗ | ✓ |
+| **Monitoreo red** | ✓ Multi-interfaz | ✓ Por app | ✗ | ✗ |
+| **Monitoreo disco** | ✓ | ✓ | ✓ | ✓ |
+| **Monitoreo batería** | ✓ | ✓ + Bluetooth | ✓ | ✓ |
+| **Control de ventiladores** | ✗ | ✓ | ✓ | ✓ |
+| **Clima** | ✗ | ✓ | ✗ | ✗ |
+| **Herramientas de optimización** | ✗ | ✗ | ✗ | ✓ |
+| **Código abierto** | ✓ | ✗ | ✗ | ✗ |
+| **Archivo único** | ✓ (~2000 líneas) | ✗ | ✗ | ✗ |
+
+**¿Por qué DodoPulse?** Gratis, código abierto, ligero (~1-2% CPU), enfocado en privacidad (sin analíticas) y fácil de auditar/modificar.
+
 ## Contribuir
 
 ¡Las contribuciones son bienvenidas! No dudes en enviar un pull request.
