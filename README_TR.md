@@ -58,7 +58,7 @@ Gerçek zamanlı sistem metriklerini güzel mini grafiklerle gösteren hafif, ye
 ### Seçenek 1: Homebrew (önerilen)
 
 ```bash
-brew tap bluewave-labs/dodopulse
+brew tap dodoapps/tap
 brew install --cask dodopulse
 ```
 
@@ -66,7 +66,7 @@ brew install --cask dodopulse
 
 ### Seçenek 2: DMG İndir
 
-1. [Releases](https://github.com/bluewave-labs/dodopulse/releases) sayfasından en son DMG'yi indirin
+1. [Releases](https://github.com/dodoapps/dodopulse/releases) sayfasından en son DMG'yi indirin
 2. DMG'yi açın ve DodoPulse'ı Uygulamalar'a sürükleyin
 3. İlk açılışta, sağ tıklayın → Aç → onaylayın (yukarıdaki notarizasyon notuna bakın)
 
@@ -74,7 +74,7 @@ brew install --cask dodopulse
 
 1. Depoyu klonlayın:
    ```bash
-   git clone https://github.com/bluewave-labs/dodopulse.git
+   git clone https://github.com/dodoapps/dodopulse.git
    cd dodopulse
    ```
 

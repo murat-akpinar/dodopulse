@@ -58,7 +58,7 @@ Eine leichte, native macOS-Menüleisten-App, die Echtzeit-Systemmetriken mit sch
 ### Option 1: Homebrew (empfohlen)
 
 ```bash
-brew tap bluewave-labs/dodopulse
+brew tap dodoapps/tap
 brew install --cask dodopulse
 ```
 
@@ -66,7 +66,7 @@ Beim ersten Start: Rechtsklick auf die App → Öffnen → bestätigen. Oder aus
 
 ### Option 2: DMG herunterladen
 
-1. Laden Sie die neueste DMG von [Releases](https://github.com/bluewave-labs/dodopulse/releases) herunter
+1. Laden Sie die neueste DMG von [Releases](https://github.com/dodoapps/dodopulse/releases) herunter
 2. Öffnen Sie die DMG und ziehen Sie DodoPulse in Programme
 3. Beim ersten Start: Rechtsklick → Öffnen → bestätigen (siehe Hinweis zur Notarisierung oben)
 
@@ -74,7 +74,7 @@ Beim ersten Start: Rechtsklick auf die App → Öffnen → bestätigen. Oder aus
 
 1. Repository klonen:
    ```bash
-   git clone https://github.com/bluewave-labs/dodopulse.git
+   git clone https://github.com/dodoapps/dodopulse.git
    cd dodopulse
    ```
 

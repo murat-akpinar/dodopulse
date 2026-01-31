@@ -59,7 +59,7 @@ A lightweight, native macOS menu bar app that displays real-time system metrics 
 ### Option 1: Homebrew (recommended)
 
 ```bash
-brew tap bluewave-labs/dodopulse
+brew tap dodoapps/tap
 brew install --cask dodopulse
 ```
 
@@ -67,7 +67,7 @@ On first launch, right-click the app → Open → confirm. Or run: `xattr -cr /A
 
 ### Option 2: Download DMG
 
-1. Download the latest DMG from [Releases](https://github.com/bluewave-labs/dodopulse/releases)
+1. Download the latest DMG from [Releases](https://github.com/dodoapps/dodopulse/releases)
 2. Open the DMG and drag DodoPulse to Applications
 3. On first launch, right-click → Open → confirm (see note above about notarization)
 
@@ -75,7 +75,7 @@ On first launch, right-click the app → Open → confirm. Or run: `xattr -cr /A
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/bluewave-labs/dodopulse.git
+   git clone https://github.com/dodoapps/dodopulse.git
    cd dodopulse
    ```
 
@@ -202,4 +202,4 @@ Built with Swift and AppKit for native macOS performance.
 
 ---
 
-Part of the Dodo app family ([DodoPulse](https://github.com/bluewave-labs/dodopulse), [DodoTidy](https://github.com/bluewave-labs/dodotidy), [DodoClip](https://github.com/bluewave-labs/dodoclip), [DodoNest](https://github.com/bluewave-labs/dodonest))
+Part of the Dodo app family ([DodoPulse](https://github.com/dodoapps/dodopulse), [DodoTidy](https://github.com/dodoapps/dodotidy), [DodoClip](https://github.com/dodoapps/dodoclip), [DodoNest](https://github.com/dodoapps/dodonest))

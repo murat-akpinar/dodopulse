@@ -58,7 +58,7 @@
 ### オプション1：Homebrew（推奨）
 
 ```bash
-brew tap bluewave-labs/dodopulse
+brew tap dodoapps/tap
 brew install --cask dodopulse
 ```
 
@@ -66,7 +66,7 @@ brew install --cask dodopulse
 
 ### オプション2：DMGをダウンロード
 
-1. [Releases](https://github.com/bluewave-labs/dodopulse/releases)から最新のDMGをダウンロード
+1. [Releases](https://github.com/dodoapps/dodopulse/releases)から最新のDMGをダウンロード
 2. DMGを開き、DodoPulseをアプリケーションにドラッグ
 3. 初回起動時、右クリック → 開く → 確認（上記の公証に関する注意を参照）
 
@@ -74,7 +74,7 @@ brew install --cask dodopulse
 
 1. リポジトリをクローン：
    ```bash
-   git clone https://github.com/bluewave-labs/dodopulse.git
+   git clone https://github.com/dodoapps/dodopulse.git
    cd dodopulse
    ```
 

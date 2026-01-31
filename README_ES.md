@@ -58,7 +58,7 @@ Una aplicación ligera y nativa para la barra de menús de macOS que muestra mé
 ### Opción 1: Homebrew (recomendado)
 
 ```bash
-brew tap bluewave-labs/dodopulse
+brew tap dodoapps/tap
 brew install --cask dodopulse
 ```
 
@@ -66,7 +66,7 @@ En el primer inicio, haz clic derecho en la app → Abrir → confirmar. O ejecu
 
 ### Opción 2: Descargar DMG
 
-1. Descarga el último DMG desde [Releases](https://github.com/bluewave-labs/dodopulse/releases)
+1. Descarga el último DMG desde [Releases](https://github.com/dodoapps/dodopulse/releases)
 2. Abre el DMG y arrastra DodoPulse a Aplicaciones
 3. En el primer inicio, clic derecho → Abrir → confirmar (ver nota sobre notarización arriba)
 
@@ -74,7 +74,7 @@ En el primer inicio, haz clic derecho en la app → Abrir → confirmar. O ejecu
 
 1. Clonar el repositorio:
    ```bash
-   git clone https://github.com/bluewave-labs/dodopulse.git
+   git clone https://github.com/dodoapps/dodopulse.git
    cd dodopulse
    ```
 
