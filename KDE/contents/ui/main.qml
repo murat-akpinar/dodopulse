@@ -19,6 +19,9 @@ PlasmoidItem {
     property real diskUsage: 0
     property real diskFreeGB: 0
     property real diskTotalGB: 0
+    property string diskMountPoint: "/"
+    property string diskModel: ""
+    property var otherDisks: []  // [{mount, usage, freeGB, totalGB}, ...]
     property real netIn: 0
     property real netOut: 0
     property real netTotalIn: 0
@@ -108,17 +111,31 @@ PlasmoidItem {
         }
     }
 
+    onExpandedChanged: {
+        if (expanded) {
+            // Force repaint all canvases when popup opens
+            Qt.callLater(function() {
+                if (cpuCanvas) cpuCanvas.requestPaint()
+                if (memCanvas) memCanvas.requestPaint()
+                if (gpuCanvas) gpuCanvas.requestPaint()
+                if (netCanvas) netCanvas.requestPaint()
+            })
+        }
+    }
+
     fullRepresentation: Rectangle {
         id: popup
         
         readonly property int cardHeight: 68
         readonly property int networkCardHeight: 85
         readonly property int batteryCards: hasBattery ? 1 : 0
+        readonly property int extraDiskCards: otherDisks.length
         
-        Layout.preferredWidth: 350
-        Layout.preferredHeight: 30 + (6 * cardHeight) + networkCardHeight - cardHeight + (batteryCards * 55) + (7 * 8) + 28
-        Layout.minimumWidth: 340
-        Layout.minimumHeight: Layout.preferredHeight
+        Layout.preferredWidth: 360
+        Layout.preferredHeight: 30 + (6 * cardHeight) + networkCardHeight - cardHeight + (batteryCards * 60) + (extraDiskCards * 50) + (7 * 8) + 28 + 10
+        Layout.minimumWidth: 350
+        Layout.minimumHeight: 400
+        Layout.maximumHeight: 800
         
         color: Kirigami.Theme.backgroundColor
 
@@ -132,7 +149,7 @@ PlasmoidItem {
                 Layout.preferredHeight: 26
                 PlasmaComponents.Label { text: "DodoPulse"; font.pixelSize: 16; font.bold: true }
                 Item { Layout.fillWidth: true }
-                PlasmaComponents.Label { text: "↑ " + formatUptime(uptime); font.pixelSize: 10; opacity: 0.7 }
+                PlasmaComponents.Label { text: "↑ " + formatUptime(uptime); font.pixelSize: 11; font.bold: true; opacity: 0.8 }
             }
 
             // CPU
@@ -160,11 +177,19 @@ PlasmoidItem {
                                 }
                             }
                         }
-                        PlasmaComponents.Label { text: "CPU"; font.pixelSize: 10; opacity: 0.7 }
-                        PlasmaComponents.Label { text: cpuModel || (cpuCores + " cores"); font.pixelSize: 9; opacity: 0.5; Layout.maximumWidth: 140; elide: Text.ElideRight }
+                        PlasmaComponents.Label { text: "CPU"; font.pixelSize: 11; font.bold: true; opacity: 0.9 }
+                        PlasmaComponents.Label { text: cpuModel || (cpuCores + " cores"); font.pixelSize: 10; font.bold: true; opacity: 0.7; Layout.maximumWidth: 150; elide: Text.ElideRight }
                     }
                     Item { Layout.fillWidth: true }
-                    Canvas { id: cpuCanvas; Layout.preferredWidth: 90; Layout.preferredHeight: 48; onPaint: drawGraph(getContext("2d"), cpuHistory, cpuColor, width, height) }
+                    Canvas {
+                        id: cpuCanvas
+                        Layout.preferredWidth: 90
+                        Layout.preferredHeight: 48
+                        property var historyData: cpuHistory
+                        onHistoryDataChanged: requestPaint()
+                        onPaint: drawGraph(getContext("2d"), cpuHistory, cpuColor, width, height)
+                        Timer { interval: 1000; running: true; repeat: true; onTriggered: parent.requestPaint() }
+                    }
                 }
             }
 
@@ -178,11 +203,19 @@ PlasmoidItem {
                     ColumnLayout {
                         spacing: 2
                         PlasmaComponents.Label { text: memUsage.toFixed(1) + "%"; font.pixelSize: 22; font.bold: true; color: memUsage > 90 ? dangerColor : (memUsage > 75 ? warningColor : memColor) }
-                        PlasmaComponents.Label { text: "Memory"; font.pixelSize: 10; opacity: 0.7 }
-                        PlasmaComponents.Label { text: memUsedGB.toFixed(1) + " / " + memTotalGB.toFixed(0) + " GB"; font.pixelSize: 9; opacity: 0.5 }
+                        PlasmaComponents.Label { text: "Memory"; font.pixelSize: 11; font.bold: true; opacity: 0.9 }
+                        PlasmaComponents.Label { text: memUsedGB.toFixed(1) + " / " + memTotalGB.toFixed(0) + " GB"; font.pixelSize: 10; font.bold: true; opacity: 0.7 }
                     }
                     Item { Layout.fillWidth: true }
-                    Canvas { id: memCanvas; Layout.preferredWidth: 90; Layout.preferredHeight: 48; onPaint: drawGraph(getContext("2d"), memHistory, memColor, width, height) }
+                    Canvas {
+                        id: memCanvas
+                        Layout.preferredWidth: 90
+                        Layout.preferredHeight: 48
+                        property var historyData: memHistory
+                        onHistoryDataChanged: requestPaint()
+                        onPaint: drawGraph(getContext("2d"), memHistory, memColor, width, height)
+                        Timer { interval: 1000; running: true; repeat: true; onTriggered: parent.requestPaint() }
+                    }
                 }
             }
 
@@ -204,11 +237,19 @@ PlasmoidItem {
                                 PlasmaComponents.Label { id: gpuTempText; anchors.centerIn: parent; text: gpuTemp.toFixed(0) + "°C"; font.pixelSize: 11; font.bold: true; color: gpuTemp > 85 ? dangerColor : (gpuTemp > 70 ? warningColor : tempColor) }
                             }
                         }
-                        PlasmaComponents.Label { text: "GPU"; font.pixelSize: 10; opacity: 0.7 }
-                        PlasmaComponents.Label { text: gpuName; font.pixelSize: 9; opacity: 0.5; Layout.maximumWidth: 140; elide: Text.ElideRight }
+                        PlasmaComponents.Label { text: "GPU"; font.pixelSize: 11; font.bold: true; opacity: 0.9 }
+                        PlasmaComponents.Label { text: gpuName; font.pixelSize: 10; font.bold: true; opacity: 0.7; Layout.maximumWidth: 150; elide: Text.ElideRight }
                     }
                     Item { Layout.fillWidth: true }
-                    Canvas { id: gpuCanvas; Layout.preferredWidth: 90; Layout.preferredHeight: 48; onPaint: drawGraph(getContext("2d"), gpuHistory, gpuColor, width, height) }
+                    Canvas {
+                        id: gpuCanvas
+                        Layout.preferredWidth: 90
+                        Layout.preferredHeight: 48
+                        property var historyData: gpuHistory
+                        onHistoryDataChanged: requestPaint()
+                        onPaint: drawGraph(getContext("2d"), gpuHistory, gpuColor, width, height)
+                        Timer { interval: 1000; running: true; repeat: true; onTriggered: parent.requestPaint() }
+                    }
                 }
             }
 
@@ -221,43 +262,84 @@ PlasmoidItem {
                     anchors.fill: parent; anchors.margins: 10; spacing: 8
                     ColumnLayout {
                         spacing: 2
-                        PlasmaComponents.Label { text: "Network"; font.pixelSize: 10; opacity: 0.7 }
+                        PlasmaComponents.Label { text: "Network"; font.pixelSize: 11; font.bold: true; opacity: 0.9 }
                         RowLayout {
                             spacing: 4
                             PlasmaComponents.Label { text: "↓"; font.pixelSize: 14; font.bold: true; color: netColor }
-                            PlasmaComponents.Label { text: formatSpeed(netIn); font.pixelSize: 12; font.bold: true; color: netColor }
+                            PlasmaComponents.Label { text: formatSpeed(netIn); font.pixelSize: 13; font.bold: true; color: netColor }
                         }
                         RowLayout {
                             spacing: 4
                             PlasmaComponents.Label { text: "↑"; font.pixelSize: 14; font.bold: true; color: netUpColor }
-                            PlasmaComponents.Label { text: formatSpeed(netOut); font.pixelSize: 12; font.bold: true; color: netUpColor }
+                            PlasmaComponents.Label { text: formatSpeed(netOut); font.pixelSize: 13; font.bold: true; color: netUpColor }
                         }
-                        PlasmaComponents.Label { text: "Session: ↓" + formatBytes(netTotalIn) + " ↑" + formatBytes(netTotalOut); font.pixelSize: 8; opacity: 0.5 }
+                        PlasmaComponents.Label { text: "Session: ↓" + formatBytes(netTotalIn) + " ↑" + formatBytes(netTotalOut); font.pixelSize: 9; font.bold: true; opacity: 0.7 }
                     }
                     Item { Layout.fillWidth: true }
                     ColumnLayout {
                         spacing: 1
-                        PlasmaComponents.Label { text: "Local: " + localIP; font.pixelSize: 8; opacity: 0.6; Layout.alignment: Qt.AlignRight }
-                        PlasmaComponents.Label { text: "Public: " + publicIP; font.pixelSize: 8; opacity: 0.6; Layout.alignment: Qt.AlignRight }
-                        Canvas { id: netCanvas; Layout.preferredWidth: 85; Layout.preferredHeight: 38; onPaint: drawGraph(getContext("2d"), netHistory, netColor, width, height) }
+                        PlasmaComponents.Label { text: "Local: " + localIP; font.pixelSize: 9; font.bold: true; opacity: 0.8; Layout.alignment: Qt.AlignRight }
+                        PlasmaComponents.Label { text: "Public: " + publicIP; font.pixelSize: 9; font.bold: true; opacity: 0.8; Layout.alignment: Qt.AlignRight }
+                        Canvas {
+                            id: netCanvas
+                            Layout.preferredWidth: 85
+                            Layout.preferredHeight: 38
+                            property var historyData: netHistory
+                            onHistoryDataChanged: requestPaint()
+                            onPaint: drawGraph(getContext("2d"), netHistory, netColor, width, height)
+                            Timer { interval: 1000; running: true; repeat: true; onTriggered: parent.requestPaint() }
+                        }
                     }
                 }
             }
 
-            // Disk
+            // Disk - Main
             Rectangle {
-                Layout.fillWidth: true; Layout.preferredHeight: 55; radius: 10
+                Layout.fillWidth: true; Layout.preferredHeight: 70; radius: 10
                 color: Qt.rgba(diskColor.r, diskColor.g, diskColor.b, 0.1)
                 border.color: Qt.rgba(diskColor.r, diskColor.g, diskColor.b, 0.3); border.width: 1
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: 10; spacing: 4
                     RowLayout {
-                        PlasmaComponents.Label { text: diskUsage.toFixed(0) + "%"; font.pixelSize: 18; font.bold: true; color: diskUsage > 90 ? dangerColor : (diskUsage > 75 ? warningColor : diskColor) }
-                        PlasmaComponents.Label { text: "Disk"; font.pixelSize: 10; opacity: 0.7 }
+                        PlasmaComponents.Label { text: diskUsage.toFixed(0) + "%"; font.pixelSize: 20; font.bold: true; color: diskUsage > 90 ? dangerColor : (diskUsage > 75 ? warningColor : diskColor) }
+                        ColumnLayout {
+                            spacing: 0
+                            PlasmaComponents.Label { text: "Disk"; font.pixelSize: 11; font.bold: true; opacity: 0.9 }
+                            PlasmaComponents.Label { text: diskFreeGB.toFixed(0) + " GB free of " + diskTotalGB.toFixed(0) + " GB"; font.pixelSize: 10; font.bold: true; opacity: 0.7 }
+                        }
                         Item { Layout.fillWidth: true }
-                        PlasmaComponents.Label { text: diskFreeGB.toFixed(0) + " GB free of " + diskTotalGB.toFixed(0) + " GB"; font.pixelSize: 9; opacity: 0.6 }
+                        ColumnLayout {
+                            spacing: 0
+                            PlasmaComponents.Label { text: diskMountPoint; font.pixelSize: 10; font.bold: true; opacity: 0.9; Layout.alignment: Qt.AlignRight }
+                            PlasmaComponents.Label { text: diskModel; font.pixelSize: 9; font.bold: true; opacity: 0.6; Layout.alignment: Qt.AlignRight; visible: diskModel !== "" }
+                        }
                     }
                     Rectangle { Layout.fillWidth: true; height: 6; radius: 3; color: Qt.rgba(0.5, 0.5, 0.5, 0.2); Rectangle { width: parent.width * Math.min(diskUsage / 100, 1); height: parent.height; radius: 3; color: diskUsage > 90 ? dangerColor : (diskUsage > 75 ? warningColor : diskColor) } }
+                }
+            }
+
+            // Other Mount Points
+            Repeater {
+                model: otherDisks
+                Rectangle {
+                    Layout.fillWidth: true; Layout.preferredHeight: 42; radius: 8
+                    color: Qt.rgba(diskColor.r, diskColor.g, diskColor.b, 0.05)
+                    border.color: Qt.rgba(diskColor.r, diskColor.g, diskColor.b, 0.2); border.width: 1
+                    RowLayout {
+                        anchors.fill: parent; anchors.margins: 8; spacing: 8
+                        PlasmaComponents.Label { text: modelData.usage.toFixed(0) + "%"; font.pixelSize: 14; font.bold: true; color: modelData.usage > 90 ? dangerColor : (modelData.usage > 75 ? warningColor : diskColor) }
+                        ColumnLayout {
+                            spacing: 0
+                            PlasmaComponents.Label { text: modelData.mount; font.pixelSize: 10; font.bold: true; opacity: 0.9 }
+                            PlasmaComponents.Label { text: modelData.freeGB.toFixed(0) + " GB free of " + modelData.totalGB.toFixed(0) + " GB"; font.pixelSize: 9; opacity: 0.6 }
+                        }
+                        Item { Layout.fillWidth: true }
+                        Rectangle {
+                            Layout.preferredWidth: 60; Layout.preferredHeight: 5; radius: 2
+                            color: Qt.rgba(0.5, 0.5, 0.5, 0.2)
+                            Rectangle { width: parent.width * Math.min(modelData.usage / 100, 1); height: parent.height; radius: 2; color: modelData.usage > 90 ? dangerColor : (modelData.usage > 75 ? warningColor : diskColor) }
+                        }
+                    }
                 }
             }
 
@@ -269,10 +351,10 @@ PlasmoidItem {
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: 10; spacing: 4
                     RowLayout {
-                        PlasmaComponents.Label { text: batteryLevel.toFixed(0) + "%"; font.pixelSize: 18; font.bold: true; color: batteryCharging ? "#60A5FA" : (batteryLevel < 20 ? dangerColor : battColor) }
-                        PlasmaComponents.Label { text: batteryCharging ? "Charging" : "Battery"; font.pixelSize: 10; opacity: 0.7 }
+                        PlasmaComponents.Label { text: batteryLevel.toFixed(0) + "%"; font.pixelSize: 20; font.bold: true; color: batteryCharging ? "#60A5FA" : (batteryLevel < 20 ? dangerColor : battColor) }
+                        PlasmaComponents.Label { text: batteryCharging ? "Charging" : "Battery"; font.pixelSize: 11; font.bold: true; opacity: 0.9 }
                         Item { Layout.fillWidth: true }
-                        PlasmaComponents.Label { text: batteryStatus; font.pixelSize: 9; opacity: 0.6 }
+                        PlasmaComponents.Label { text: batteryStatus; font.pixelSize: 10; font.bold: true; opacity: 0.8 }
                     }
                     Rectangle { Layout.fillWidth: true; height: 6; radius: 3; color: Qt.rgba(0.5, 0.5, 0.5, 0.2); Rectangle { width: parent.width * Math.min(batteryLevel / 100, 1); height: parent.height; radius: 3; color: batteryCharging ? "#60A5FA" : (batteryLevel < 20 ? dangerColor : battColor) } }
                 }
@@ -286,14 +368,14 @@ PlasmoidItem {
                 ColumnLayout {
                     anchors.fill: parent; anchors.margins: 8; spacing: 2
                     RowLayout {
-                        PlasmaComponents.Label { text: "System"; font.pixelSize: 10; opacity: 0.7 }
+                        PlasmaComponents.Label { text: "System"; font.pixelSize: 11; font.bold: true; opacity: 0.9 }
                         Item { Layout.fillWidth: true }
-                        PlasmaComponents.Label { text: "Processes: " + processCount; font.pixelSize: 9; opacity: 0.6 }
+                        PlasmaComponents.Label { text: "Processes: " + processCount; font.pixelSize: 10; font.bold: true; opacity: 0.8 }
                     }
                     RowLayout {
-                        PlasmaComponents.Label { text: "Load: " + loadAvg1.toFixed(2) + "  " + loadAvg5.toFixed(2) + "  " + loadAvg15.toFixed(2); font.pixelSize: 10; color: systemColor }
+                        PlasmaComponents.Label { text: "Load: " + loadAvg1.toFixed(2) + "  " + loadAvg5.toFixed(2) + "  " + loadAvg15.toFixed(2); font.pixelSize: 11; font.bold: true; color: systemColor }
                         Item { Layout.fillWidth: true }
-                        PlasmaComponents.Label { text: "Kernel: " + kernelVersion; font.pixelSize: 9; opacity: 0.5 }
+                        PlasmaComponents.Label { text: "Kernel: " + kernelVersion; font.pixelSize: 10; font.bold: true; opacity: 0.7 }
                     }
                 }
             }
@@ -350,6 +432,8 @@ PlasmoidItem {
             else if (id === "mem") parseMem(out)
             else if (id === "net") parseNet(out)
             else if (id === "disk") parseDisk(out)
+            else if (id === "disks") parseAllDisks(out)
+            else if (id === "diskmodel") parseDiskModel(out)
             else if (id === "load") parseLoad(out)
             else if (id === "uptime") uptime = parseInt(out.split(' ')[0]) || 0
             else if (id === "gpu") parseGpu(out)
@@ -386,6 +470,13 @@ PlasmoidItem {
             exec.run("net", "cat /proc/net/dev 2>/dev/null")
             exec.run("load", "cat /proc/loadavg 2>/dev/null")
             exec.run("uptime", "cat /proc/uptime 2>/dev/null")
+            // Force repaint graphs if expanded
+            if (root.expanded) {
+                if (cpuCanvas) cpuCanvas.requestPaint()
+                if (memCanvas) memCanvas.requestPaint()
+                if (gpuCanvas) gpuCanvas.requestPaint()
+                if (netCanvas) netCanvas.requestPaint()
+            }
         }
     }
 
@@ -397,6 +488,7 @@ PlasmoidItem {
         triggeredOnStart: true
         onTriggered: {
             exec.run("disk", "df -B1 / 2>/dev/null | tail -1")
+            exec.run("disks", "df -B1 -x tmpfs -x devtmpfs -x squashfs -x overlay -x efivarfs 2>/dev/null | tail -n +2")
             exec.run("gpu", "nvidia-smi --query-gpu=utilization.gpu,temperature.gpu --format=csv,noheader,nounits 2>/dev/null || cat /sys/class/drm/card*/device/gpu_busy_percent 2>/dev/null || echo '0'")
             exec.run("battery", "cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -1; echo '---'; cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -1; echo '---'; cat /sys/class/power_supply/AC*/online 2>/dev/null || cat /sys/class/power_supply/ADP*/online 2>/dev/null || echo '0'")
             exec.run("temp", "cat /sys/class/hwmon/hwmon*/temp1_input 2>/dev/null | head -1 || cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null")
@@ -410,6 +502,7 @@ PlasmoidItem {
         exec.run("kernel", "uname -r")
         exec.run("cores", "nproc")
         exec.run("cpumodel", "lscpu 2>/dev/null | grep 'Model name' | head -1")
+        exec.run("diskmodel", "lsblk -d -n -o MODEL $(findmnt -n -o SOURCE / | sed 's/\\[.*//;s/[0-9]*$//;s/p[0-9]*$//') 2>/dev/null")
         exec.run("gpuname", "glxinfo 2>/dev/null | grep 'OpenGL renderer' | head -1 || lspci 2>/dev/null | grep -i 'vga' | head -1")
         exec.run("publicip", "curl -s --max-time 3 https://api.ipify.org 2>/dev/null || echo '—'")
     }
@@ -481,9 +574,57 @@ PlasmoidItem {
     function parseDisk(content) {
         if (!content) return
         var p = content.trim().split(/\s+/)
-        if (p.length >= 4) {
+        if (p.length >= 6) {
             var t = parseInt(p[1]) || 0, u = parseInt(p[2]) || 0, a = parseInt(p[3]) || 0
-            if (t > 0) { diskUsage = (u / t) * 100; diskTotalGB = t / 1073741824; diskFreeGB = a / 1073741824 }
+            var mount = p[5] || "/"
+            if (t > 0) { 
+                diskUsage = (u / t) * 100
+                diskTotalGB = t / 1073741824
+                diskFreeGB = a / 1073741824
+                diskMountPoint = mount
+            }
+        }
+    }
+
+    function parseAllDisks(content) {
+        if (!content) return
+        var lines = content.trim().split('\n')
+        var disks = []
+        for (var i = 0; i < lines.length; i++) {
+            var p = lines[i].trim().split(/\s+/)
+            if (p.length >= 6) {
+                var mount = p[5]
+                // Skip system mounts
+                if (mount === "/" || mount === "/boot" || mount === "/boot/efi" || 
+                    mount === "/home" || mount === "/var" || mount === "/tmp" ||
+                    mount === "/root" || mount === "/srv" ||
+                    mount.indexOf("/var/") === 0 || mount.indexOf("/snap") === 0 ||
+                    mount.indexOf("/sys") === 0 || mount.indexOf("/proc") === 0 ||
+                    mount.indexOf("/dev") === 0 || mount === "/run" ||
+                    (mount.indexOf("/run/") === 0 && mount.indexOf("/run/media/") !== 0)) continue
+                
+                var t = parseInt(p[1]) || 0, u = parseInt(p[2]) || 0, a = parseInt(p[3]) || 0
+                if (t > 0 && t > 1073741824) { // Only show disks > 1GB
+                    // Get short name from mount path
+                    var shortName = mount.split('/').pop() || mount
+                    disks.push({
+                        mount: shortName,
+                        fullMount: mount,
+                        usage: (u / t) * 100,
+                        freeGB: a / 1073741824,
+                        totalGB: t / 1073741824
+                    })
+                }
+            }
+        }
+        otherDisks = disks
+    }
+
+    function parseDiskModel(content) {
+        if (!content) return
+        var model = content.trim()
+        if (model && model !== "") {
+            diskModel = model.replace(/\s+/g, ' ').substring(0, 25)
         }
     }
 
