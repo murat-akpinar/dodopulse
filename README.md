@@ -216,7 +216,3 @@ For more details, see [KDE/README.md](KDE/README.md)
 ## Acknowledgments
 
 Built with Swift and AppKit for native macOS performance.
-
----
-
-Part of the Dodo app family ([DodoPulse](https://github.com/dodoapps/dodopulse), [DodoTidy](https://github.com/dodoapps/dodotidy), [DodoClip](https://github.com/dodoapps/dodoclip), [DodoNest](https://github.com/dodoapps/dodonest))
